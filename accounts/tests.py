@@ -1,6 +1,7 @@
+"""Tests for the accounts app."""
 from django.test import TestCase
 
-# Create your tests here.
+from accounts.models import User
 
 
 class EnsureAdminTests(TestCase):
