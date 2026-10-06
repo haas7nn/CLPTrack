@@ -82,7 +82,7 @@ def proximity_indicator(student, now):
         return 0.0
     if Submission.objects.filter(student=student, deliverable=upcoming).exists():
         return 0.0
-    days_left = (upcoming.due_at - now).days
+    days_left = (upcoming.due_at - now).total_seconds() / 86400  # fractional days, so a deadline in 2.5 days counts as 2.5
     if days_left >= PROXIMITY_WINDOW_DAYS:
         return 0.0
     return clamp((PROXIMITY_WINDOW_DAYS - days_left) / PROXIMITY_WINDOW_DAYS)

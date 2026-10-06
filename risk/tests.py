@@ -1,5 +1,5 @@
 """Tests for the risk score, including the worked example from the project plan."""
-from datetime import datetime, timedelta
+from datetime import timedelta
 
 from django.core.files.base import ContentFile
 from django.test import TestCase
@@ -8,12 +8,6 @@ from django.utils import timezone
 from accounts.models import User
 from progress.models import Action, Deliverable, Meeting, Submission
 from risk import scoring
-
-
-def at(days_from_now, hour=12):
-    now = timezone.now()
-    base = now.replace(hour=hour, minute=0, second=0, microsecond=0)
-    return base + timedelta(days=days_from_now)
 
 
 class RiskScoreTests(TestCase):
@@ -27,19 +21,20 @@ class RiskScoreTests(TestCase):
         self.assertIn(result["status"], ["green", "amber", "red"])
 
     def test_worked_example_from_the_plan_scores_amber(self):
-        now = timezone.now()
+        now = timezone.now().replace(microsecond=0)
+        day = timedelta(days=1)
         # four deliverables already due, one of them never submitted
-        due = [Deliverable.objects.create(title=f"D{i}", order=i, due_at=at(-20 + i * 2)) for i in range(4)]
+        due = [Deliverable.objects.create(title=f"D{i}", order=i, due_at=now - (20 - 2 * i) * day) for i in range(4)]
         for d in due[:3]:
             Submission.objects.create(student=self.student, deliverable=d,
                                       file=ContentFile(b"x", name="a.pdf"),
-                                      submitted_at=d.due_at + timedelta(days=3))  # three days late each
+                                      submitted_at=d.due_at + 3 * day)  # three days late each
         # last meeting 16 days ago, with four actions, two still open
-        meeting = Meeting.objects.create(student=self.student, held_on=(now - timedelta(days=16)).date(), discussed="plan")
+        meeting = Meeting.objects.create(student=self.student, held_on=(now - 16 * day).date(), discussed="plan")
         for i in range(4):
             Action.objects.create(meeting=meeting, description=f"task {i}", done=(i < 2))
-        # next deadline in three days with nothing uploaded
-        Deliverable.objects.create(title="Next", order=9, due_at=at(3))
+        # next deadline in exactly three days with nothing uploaded
+        Deliverable.objects.create(title="Next", order=9, due_at=now + 3 * day)
 
         result = scoring.compute(self.student, now=now)
         b = result["breakdown"]
