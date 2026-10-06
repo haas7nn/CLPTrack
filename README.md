@@ -17,3 +17,16 @@ Supervisors see all their students on one dashboard with a green, amber or red r
     .venv/bin/python manage.py runserver
 
 Then open http://127.0.0.1:8000
+
+## Sample data for development
+
+    .venv/bin/python manage.py seed_deliverables   # the CLP deadlines for this semester
+    .venv/bin/python manage.py seed_demo           # sample accounts
+
+Sample accounts, development only: coordinator (also the admin), supervisor1, student1, student2, student3.
+The password for all of them is in accounts/management/commands/seed_demo.py.
+The admin site is at http://127.0.0.1:8000/admin
+
+## Tests
+
+    .venv/bin/python manage.py test
