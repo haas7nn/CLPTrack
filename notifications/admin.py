@@ -1,3 +1,9 @@
 from django.contrib import admin
 
-# Register your models here.
+from .models import NotificationLog
+
+
+@admin.register(NotificationLog)
+class NotificationLogAdmin(admin.ModelAdmin):
+    list_display = ("kind", "recipient", "subject", "sent_at")
+    list_filter = ("kind",)

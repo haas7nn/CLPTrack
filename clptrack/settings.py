@@ -138,3 +138,7 @@ MEDIA_ROOT = BASE_DIR / "media"
 LOGIN_URL = "login"
 LOGIN_REDIRECT_URL = "home"
 LOGOUT_REDIRECT_URL = "login"
+
+# Email. The MAILERS setting above uses the console backend while developing, so emails are
+# printed to the terminal instead of being sent. The real host will use an SMTP service.
+DEFAULT_FROM_EMAIL = "CLPTrack <no-reply@clptrack.local>"
