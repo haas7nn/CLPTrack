@@ -7,7 +7,7 @@
   <tbody>
   {% for s in students %}
     <tr>
-      <td>{{ s.user.get_full_name|default:s.user.username }}</td>
+      <td><a href="{% url 'student_detail' s.user.id %}">{{ s.user.get_full_name|default:s.user.username }}</a></td>
       <td>{{ s.user.student_id }}</td>
       <td>{{ s.submitted }} of {{ s.due_count }} due</td>
       <td>{% if s.missing %}<span class="text-danger fw-semibold">{{ s.missing }}</span>{% else %}0{% endif %}</td>
