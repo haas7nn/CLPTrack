@@ -3,6 +3,7 @@
 {% block content %}
 <div class="d-flex justify-content-between align-items-end mb-3">
   <h1 class="h4 mb-0">My students</h1>
+  <a class="btn btn-outline-secondary btn-sm ms-auto" href="{% url 'export_csv' %}">Download as spreadsheet</a>
   <div class="d-flex gap-2">
     <span class="badge rounded-pill text-bg-success">{{ counts.green }} green</span>
     <span class="badge rounded-pill text-bg-warning">{{ counts.amber }} amber</span>

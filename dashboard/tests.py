@@ -47,3 +47,34 @@ class CoordinatorTests(TestCase):
         self.assertContains(response, "Mona Khalil")
         self.client.login(username="stu9", password="x")
         self.assertEqual(self.client.get(reverse("coordinator_home")).status_code, 403)
+
+
+class ExportTests(TestCase):
+    def setUp(self):
+        self.supervisor = User.objects.create_user("sup", role="supervisor", password="x")
+        self.other = User.objects.create_user("sup2", role="supervisor", password="x")
+        self.coordinator = User.objects.create_user("coord", role="coordinator", password="x")
+        User.objects.create_user("stu", role="student", password="x", supervisor=self.supervisor,
+                                 first_name="Zahra", last_name="Mahmood", student_id="202300001")
+        User.objects.create_user("stu2", role="student", password="x", supervisor=self.other,
+                                 first_name="Omar", last_name="Khalid", student_id="202300002")
+
+    def test_supervisor_downloads_only_their_own_students(self):
+        self.client.login(username="sup", password="x")
+        response = self.client.get(reverse("export_csv"))
+        self.assertEqual(response["Content-Type"], "text/csv")
+        self.assertIn("attachment", response["Content-Disposition"])
+        text = response.content.decode()
+        self.assertIn("202300001,Zahra Mahmood", text)
+        self.assertNotIn("Omar Khalid", text)
+        self.assertIn("not scored", text)
+
+    def test_coordinator_downloads_everyone(self):
+        self.client.login(username="coord", password="x")
+        text = self.client.get(reverse("export_csv")).content.decode()
+        self.assertIn("Zahra Mahmood", text)
+        self.assertIn("Omar Khalid", text)
+
+    def test_student_cannot_download(self):
+        self.client.login(username="stu", password="x")
+        self.assertEqual(self.client.get(reverse("export_csv")).status_code, 403)

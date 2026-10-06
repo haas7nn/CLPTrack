@@ -1,7 +1,10 @@
 {% extends "base.html" %}
 {% block title %}Cohort, CLPTrack{% endblock %}
 {% block content %}
-<h1 class="h4 mb-3">The whole cohort</h1>
+<div class="d-flex align-items-center mb-3">
+  <h1 class="h4 mb-0">The whole cohort</h1>
+  <a class="btn btn-outline-secondary btn-sm ms-auto" href="{% url 'export_csv' %}">Download as spreadsheet</a>
+</div>
 {% for g in groups %}
 <div class="card shadow-sm mb-3"><div class="card-body">
   <div class="d-flex justify-content-between align-items-center mb-2">
