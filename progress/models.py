@@ -1,4 +1,4 @@
-"""Progress records: what is due, what was submitted, what was discussed.
+"""Everything about a student's progress: what is due, what they handed in, what was discussed.
 
 Deliverable  one item every student must hand in, with its deadline
 Submission   one file a student uploaded for a deliverable
@@ -12,7 +12,7 @@ from django.utils import timezone
 
 
 class Deliverable(models.Model):
-    """Something every CLP student must hand in, for example Reflection 2."""
+    """One thing every student has to hand in, like Reflection 2, with its deadline."""
 
     title = models.CharField(max_length=120)
     description = models.TextField(blank=True)
@@ -30,7 +30,7 @@ class Deliverable(models.Model):
 
 
 class Submission(models.Model):
-    """A file handed in by a student for one deliverable."""
+    """One file a student uploaded for one deliverable."""
 
     student = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="submissions")
     deliverable = models.ForeignKey(Deliverable, on_delete=models.CASCADE, related_name="submissions")
@@ -45,13 +45,13 @@ class Submission(models.Model):
         return f"{self.student} submitted {self.deliverable}"
 
     def days_late(self):
-        """How many days after the deadline this was handed in, 0 if on time."""
+        """How many days late this was. 0 means on time."""
         delay = self.submitted_at - self.deliverable.due_at
         return max(0, delay.days)
 
 
 class Meeting(models.Model):
-    """One supervision meeting, recorded by the student."""
+    """One meeting with the supervisor, written down by the student."""
 
     student = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="meetings")
     held_on = models.DateField()
@@ -66,7 +66,7 @@ class Meeting(models.Model):
 
 
 class Action(models.Model):
-    """A task agreed in a meeting, to be completed by the student."""
+    """Something the student agreed to do in a meeting. Ticked when done."""
 
     meeting = models.ForeignKey(Meeting, on_delete=models.CASCADE, related_name="actions")
     description = models.CharField(max_length=300)
@@ -78,7 +78,7 @@ class Action(models.Model):
 
 
 class Feedback(models.Model):
-    """A written comment from a supervisor about a student's work or meeting."""
+    """A comment the supervisor leaves for the student."""
 
     supervisor = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="feedback_given")
     student = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="feedback_received")

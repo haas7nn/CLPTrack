@@ -1,4 +1,4 @@
-"""Load the CLP deliverable schedule for the September 2026 semester.
+"""Puts the ten real CLP deadlines for this semester into the database.
 
 Run with:  python manage.py seed_deliverables
 It only adds deliverables that do not exist yet, so it is safe to run twice.

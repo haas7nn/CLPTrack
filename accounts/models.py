@@ -1,14 +1,14 @@
-"""User accounts for CLPTrack.
+"""Everyone who can sign in.
 
-There is one User table. The "role" field says what kind of user a person is,
-and a student also records who their supervisor is.
+One table for all of them. The role field says if someone is a student, a supervisor
+or a coordinator, and a student also points at their supervisor.
 """
 from django.contrib.auth.models import AbstractUser
 from django.db import models
 
 
 class User(AbstractUser):
-    """A person who can sign in: a student, a supervisor or a coordinator."""
+    """One person. Student, supervisor or coordinator."""
 
     class Role(models.TextChoices):
         STUDENT = "student", "Student"

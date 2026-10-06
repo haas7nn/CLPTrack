@@ -1,15 +1,15 @@
-"""The risk score.
+"""The risk score, which is the heart of the whole system.
 
-Five indicators describe how a student is doing. Each one is turned into a
-value between 0 (no concern) and 1 (worst case), multiplied by its weight, and
-the five results are added to give a score from 0 to 100.
+We look at five signs of how a student is doing. Each sign becomes a number
+from 0 (all fine) to 1 (as bad as it gets), we multiply it by its weight, and
+add the five up to get a score out of 100.
 
     below 30   green
     30 to 59   amber
     60 and up  red
 
-The weights, the thresholds and the semester start date live in settings, so
-they can be changed without touching this file.
+The weights, the cut off points and the semester start date can be changed in
+settings.py without touching this file.
 """
 from datetime import date, timedelta
 
@@ -44,12 +44,12 @@ def semester_start():
 
 
 def clamp(value):
-    """Keep a value between 0 and 1."""
+    """Makes sure a number stays between 0 and 1."""
     return max(0.0, min(1.0, value))
 
 
 def overdue_indicator(student, now):
-    """Share of the deliverables already due that have no submission."""
+    """Of the things already due, what share has nothing handed in."""
     due = Deliverable.objects.filter(due_at__lt=now)
     total = due.count()
     if total == 0:
@@ -59,7 +59,7 @@ def overdue_indicator(student, now):
 
 
 def lateness_indicator(student):
-    """Average number of days late across the student's submissions, out of the cap."""
+    """On average, how many days late is this student, out of the 7 day cap."""
     submissions = list(Submission.objects.filter(student=student).select_related("deliverable"))
     if not submissions:
         return 0.0
@@ -68,7 +68,7 @@ def lateness_indicator(student):
 
 
 def supervision_indicator(student, today):
-    """How far the gap since the last meeting runs beyond the weekly rule."""
+    """How long since the last meeting, beyond the one week that is allowed."""
     last = Meeting.objects.filter(student=student).order_by("-held_on").first()
     since = last.held_on if last else semester_start()
     gap = (today - since).days
@@ -76,7 +76,7 @@ def supervision_indicator(student, today):
 
 
 def proximity_indicator(student, now):
-    """How close the next deadline is when nothing has been uploaded for it."""
+    """Is the next deadline close, with nothing uploaded for it yet."""
     upcoming = Deliverable.objects.filter(due_at__gte=now).order_by("due_at").first()
     if upcoming is None:
         return 0.0
@@ -89,7 +89,7 @@ def proximity_indicator(student, now):
 
 
 def actions_indicator(student):
-    """Share of the actions agreed in meetings that are still open."""
+    """What share of the things agreed in meetings are still not done."""
     actions = Action.objects.filter(meeting__student=student)
     total = actions.count()
     if total == 0:
@@ -107,7 +107,7 @@ def status_for(score):
 
 
 def compute(student, now=None):
-    """Work out the score for one student. Returns the score, the status and the breakdown."""
+    """Works out the score for one student and says what each sign contributed."""
     now = now or timezone.now()
     today = now.date()
     values = {

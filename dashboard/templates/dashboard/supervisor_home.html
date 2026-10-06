@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}My students, CLPTrack{% endblock %}
+{% block content %}
+<h1 class="h4 mb-3">My students</h1>
+<table class="table table-hover bg-white shadow-sm">
+  <thead><tr><th>Student</th><th>ID</th><th>Submitted</th><th>Missing</th><th>Last meeting</th><th>Risk</th></tr></thead>
+  <tbody>
+  {% for s in students %}
+    <tr>
+      <td>{{ s.user.get_full_name|default:s.user.username }}</td>
+      <td>{{ s.user.student_id }}</td>
+      <td>{{ s.submitted }} of {{ s.due_count }} due</td>
+      <td>{% if s.missing %}<span class="text-danger fw-semibold">{{ s.missing }}</span>{% else %}0{% endif %}</td>
+      <td>{% if s.last_meeting %}{{ s.last_meeting.held_on|date:"j M" }}{% else %}<span class="text-secondary">none</span>{% endif %}</td>
+      <td>
+        {% if s.risk %}
+        <span class="badge rounded-pill text-bg-{% if s.risk.status == 'green' %}success{% elif s.risk.status == 'amber' %}warning{% else %}danger{% endif %}">{{ s.risk.get_status_display }} {{ s.risk.score }}</span>
+        {% else %}<span class="text-secondary">not scored yet</span>{% endif %}
+      </td>
+    </tr>
+  {% empty %}
+    <tr><td colspan="6" class="text-secondary">No students are assigned to you yet.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

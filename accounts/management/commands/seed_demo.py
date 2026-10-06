@@ -1,4 +1,4 @@
-"""Create sample accounts for development and demonstration.
+"""Makes a few pretend accounts so we can try the site without real people.
 
 Run with:  python manage.py seed_demo
 Creates one coordinator, one supervisor and three students, all with the

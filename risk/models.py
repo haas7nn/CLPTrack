@@ -1,14 +1,14 @@
-"""The daily risk score of each student.
+"""The daily risk score for each student.
 
-One row is saved per student per day, so the history can be charted later.
-The score itself is calculated in risk/scoring.py.
+We keep one row per student per day so we can draw a chart of it later.
+The maths is in risk/scoring.py.
 """
 from django.conf import settings
 from django.db import models
 
 
 class RiskScore(models.Model):
-    """The risk score of one student on one day, with the indicators behind it."""
+    """One student, one day, one score, plus what caused it."""
 
     class Status(models.TextChoices):
         GREEN = "green", "Green"
