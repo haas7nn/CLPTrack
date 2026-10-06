@@ -77,4 +77,8 @@ def supervisor_home(request):
             "due_count": due_count,
             "last_meeting": student.meetings.order_by("-held_on").first(),
         })
-    return render(request, "dashboard/supervisor_home.html", {"students": students})
+    # how many students are green, amber and red right now, for the summary and the chart
+    counts = {"green": 0, "amber": 0, "red": 0, "none": 0}
+    for s in students:
+        counts[s["risk"].status if s["risk"] else "none"] += 1
+    return render(request, "dashboard/supervisor_home.html", {"students": students, "counts": counts})

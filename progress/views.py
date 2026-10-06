@@ -64,6 +64,7 @@ def student_detail(request, student_id):
         feedback.save()
         messages.success(request, "Your feedback was saved.")
         return redirect("student_detail", student_id=student.id)
+    history = list(student.risk_scores.order_by("scored_on").values("scored_on", "score"))
     return render(request, "progress/student_detail.html", {
         "student": student,
         "rows": timeline_for(student),
@@ -71,4 +72,6 @@ def student_detail(request, student_id):
         "feedback": student.feedback_received.all(),
         "risk": student.risk_scores.first(),
         "form": form,
+        # the chart needs plain lists, one of dates and one of scores
+        "chart": {"labels": [h["scored_on"].strftime("%d %b") for h in history], "scores": [h["score"] for h in history]},
     })

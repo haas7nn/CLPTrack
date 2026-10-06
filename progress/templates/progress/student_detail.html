@@ -26,6 +26,21 @@
     {% empty %}<p class="text-secondary small">No meetings recorded.</p>{% endfor %}
   </div>
   <div class="col-lg-5">
+    {% if risk %}
+    <div class="card shadow-sm mb-3"><div class="card-body">
+      <h2 class="h6">Why this score</h2>
+      <table class="table table-sm mb-2">
+        <thead><tr><th>Indicator</th><th class="text-end">Value</th><th class="text-end">Weight</th><th class="text-end">Points</th></tr></thead>
+        <tbody>
+        {% for name, part in risk.breakdown.items %}
+        <tr><td>{{ name|capfirst }}</td><td class="text-end">{{ part.value }}</td><td class="text-end">{{ part.weight }}</td><td class="text-end fw-semibold">{{ part.points }}</td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
+      <div class="small text-secondary mb-2">Scored on {{ risk.scored_on|date:"j F" }}. Below 30 green, 30 to 59 amber, 60 and above red.</div>
+      {% if chart.scores|length > 1 %}<canvas id="history" height="110"></canvas>{% endif %}
+    </div></div>
+    {% endif %}
     <div class="card shadow-sm"><div class="card-body">
       <h2 class="h6">Leave feedback</h2>
       <form method="post">{% csrf_token %}{{ form.text }}<button class="btn btn-primary btn-sm mt-2">Save</button></form>
@@ -36,4 +51,15 @@
   </div>
 </div>
 <style>#id_text{width:100%;padding:.375rem .75rem;border:1px solid #dee2e6;border-radius:.375rem}</style>
+{{ chart|json_script:"chart-data" }}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<script>
+  // draws the line of this student's score over the days it was calculated
+  const data = JSON.parse(document.getElementById("chart-data").textContent);
+  const canvas = document.getElementById("history");
+  if (canvas && data.scores.length > 1) {
+    new Chart(canvas, {type: "line", data: {labels: data.labels, datasets: [{label: "Risk score", data: data.scores, tension: 0.3}]},
+      options: {scales: {y: {min: 0, max: 100}}, plugins: {legend: {display: false}}}});
+  }
+</script>
 {% endblock %}

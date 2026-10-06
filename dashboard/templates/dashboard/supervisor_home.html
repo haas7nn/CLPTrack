@@ -1,7 +1,14 @@
 {% extends "base.html" %}
 {% block title %}My students, CLPTrack{% endblock %}
 {% block content %}
-<h1 class="h4 mb-3">My students</h1>
+<div class="d-flex justify-content-between align-items-end mb-3">
+  <h1 class="h4 mb-0">My students</h1>
+  <div class="d-flex gap-2">
+    <span class="badge rounded-pill text-bg-success">{{ counts.green }} green</span>
+    <span class="badge rounded-pill text-bg-warning">{{ counts.amber }} amber</span>
+    <span class="badge rounded-pill text-bg-danger">{{ counts.red }} red</span>
+  </div>
+</div>
 <table class="table table-hover bg-white shadow-sm">
   <thead><tr><th>Student</th><th>ID</th><th>Submitted</th><th>Missing</th><th>Last meeting</th><th>Risk</th></tr></thead>
   <tbody>
@@ -23,4 +30,18 @@
   {% endfor %}
   </tbody>
 </table>
+{% if students %}
+<div class="card shadow-sm"><div class="card-body"><h2 class="h6">Submitted so far, by student</h2><canvas id="progress" height="80"></canvas></div></div>
+{{ students|length|json_script:"n" }}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<script>
+  // one bar per student: how many of the due deliverables they have handed in
+  const labels = [{% for s in students %}"{{ s.user.get_full_name|default:s.user.username|escapejs }}",{% endfor %}];
+  const submitted = [{% for s in students %}{{ s.submitted }},{% endfor %}];
+  const due = {{ students.0.due_count|default:0 }};
+  new Chart(document.getElementById("progress"), {type: "bar",
+    data: {labels: labels, datasets: [{label: "Submitted", data: submitted}]},
+    options: {indexAxis: "y", scales: {x: {min: 0, max: Math.max(due, 1), ticks: {stepSize: 1}}}, plugins: {legend: {display: false}}}});
+</script>
+{% endif %}
 {% endblock %}
