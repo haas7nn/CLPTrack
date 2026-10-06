@@ -31,7 +31,7 @@ def home(request):
         return redirect("student_home")
     if request.user.is_supervisor:
         return redirect("supervisor_home")
-    return redirect("admin:index")
+    return redirect("coordinator_home")
 
 
 def timeline_for(student, now=None):
@@ -82,3 +82,20 @@ def supervisor_home(request):
     for s in students:
         counts[s["risk"].status if s["risk"] else "none"] += 1
     return render(request, "dashboard/supervisor_home.html", {"students": students, "counts": counts})
+
+
+@role_required("coordinator")
+def coordinator_home(request):
+    """The coordinator sees every supervisor with their students and colours."""
+    from accounts.models import User
+    groups = []
+    for supervisor in User.objects.filter(role="supervisor").order_by("last_name", "first_name"):
+        students = supervisor.students.order_by("last_name", "first_name")
+        counts = {"green": 0, "amber": 0, "red": 0, "none": 0}
+        rows = []
+        for student in students:
+            risk = RiskScore.objects.filter(student=student).first()
+            counts[risk.status if risk else "none"] += 1
+            rows.append({"user": student, "risk": risk})
+        groups.append({"supervisor": supervisor, "rows": rows, "counts": counts, "total": len(rows)})
+    return render(request, "dashboard/coordinator_home.html", {"groups": groups})

@@ -35,3 +35,7 @@ class User(AbstractUser):
     @property
     def is_supervisor(self):
         return self.role == self.Role.SUPERVISOR
+
+    @property
+    def is_coordinator(self):
+        return self.role == self.Role.COORDINATOR

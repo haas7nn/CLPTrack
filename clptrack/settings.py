@@ -10,6 +10,7 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/6.1/ref/settings/
 """
 
+import os
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -20,12 +21,12 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/6.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-9pt-sqma9lb)+s%el0-^zs&4!()brvf!9mhy68@0u60oh*6z+b'
+SECRET_KEY = os.environ.get("SECRET_KEY", "dev-only-key-change-me-on-the-host")
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.environ.get("DEBUG", "1") == "1"
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = os.environ.get("ALLOWED_HOSTS", "127.0.0.1,localhost").split(",")
 
 
 # Application definition
@@ -46,6 +47,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -142,3 +144,38 @@ LOGOUT_REDIRECT_URL = "login"
 # Email. The MAILERS setting above uses the console backend while developing, so emails are
 # printed to the terminal instead of being sent. The real host will use an SMTP service.
 DEFAULT_FROM_EMAIL = "CLPTrack <no-reply@clptrack.local>"
+
+# Where the settings differ between the laptop and the host.
+# On the host these are set as environment variables, nothing secret is written in the code.
+import dj_database_url
+DATABASES["default"] = dj_database_url.config(default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}", conn_max_age=600)
+
+STATIC_ROOT = BASE_DIR / "staticfiles"
+STORAGES = {
+    "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
+    "staticfiles": {"BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage"},
+}
+
+CSRF_TRUSTED_ORIGINS = [o for o in os.environ.get("CSRF_TRUSTED_ORIGINS", "").split(",") if o]
+
+if not DEBUG:
+    # these only make sense behind HTTPS on the real host
+    SECURE_SSL_REDIRECT = True
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+    SECURE_HSTS_SECONDS = 60 * 60 * 24 * 30
+
+# Real email on the host: set EMAIL_HOST, EMAIL_HOST_USER and EMAIL_HOST_PASSWORD there.
+if os.environ.get("EMAIL_HOST"):
+    MAILERS = {"default": {
+        "BACKEND": "django.core.mail.backends.smtp.EmailBackend",
+        "OPTIONS": {
+            "host": os.environ["EMAIL_HOST"],
+            "port": int(os.environ.get("EMAIL_PORT", "587")),
+            "username": os.environ.get("EMAIL_HOST_USER", ""),
+            "password": os.environ.get("EMAIL_HOST_PASSWORD", ""),
+            "use_tls": True,
+        },
+    }}
+    DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", DEFAULT_FROM_EMAIL)

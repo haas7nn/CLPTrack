@@ -1,0 +1,13 @@
+{# the "why this score" table, used on the student's own page and on the supervisor's view of them #}
+<div class="card shadow-sm mb-3"><div class="card-body">
+  <h2 class="h6">Why this score</h2>
+  <table class="table table-sm mb-2">
+    <thead><tr><th>Indicator</th><th class="text-end">Value</th><th class="text-end">Weight</th><th class="text-end">Points</th></tr></thead>
+    <tbody>
+    {% for name, part in risk.breakdown.items %}
+    <tr><td>{{ name|capfirst }}</td><td class="text-end">{{ part.value }}</td><td class="text-end">{{ part.weight }}</td><td class="text-end fw-semibold">{{ part.points }}</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  <div class="small text-secondary">Scored on {{ risk.scored_on|date:"j F" }}. Below 30 green, 30 to 59 amber, 60 and above red.</div>
+</div></div>

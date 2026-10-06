@@ -30,3 +30,9 @@ The admin site is at http://127.0.0.1:8000/admin
 ## Tests
 
     .venv/bin/python manage.py test
+
+## Putting it online
+
+The code is the same on the laptop and on the host. Only the environment variables differ, see
+`.env.example`. The host runs `build.sh` on every deploy, starts the site with the command in `Procfile`,
+and runs `python manage.py run_daily` once a day.
