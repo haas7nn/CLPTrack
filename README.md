@@ -34,5 +34,9 @@ The admin site is at http://127.0.0.1:8000/admin
 ## Putting it online
 
 The code is the same on the laptop and on the host. Only the environment variables differ, see
-`.env.example`. The host runs `build.sh` on every deploy, starts the site with the command in `Procfile`,
-and runs `python manage.py run_daily` once a day.
+`.env.example`. `render.yaml` describes the site for Render, which runs `build.sh` on every deploy and
+starts the site with gunicorn. The database is a free Neon Postgres, pasted in as `DATABASE_URL`.
+
+The daily job (scores, then emails) is triggered by the GitHub workflow in `.github/workflows/daily.yml`,
+which posts to `/tasks/daily/` with the secret token every morning. Two repository secrets are needed:
+`SITE_URL` (the site address without a trailing slash) and `DAILY_TASK_TOKEN` (the same value as on Render).

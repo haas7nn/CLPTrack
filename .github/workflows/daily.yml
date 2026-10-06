@@ -1,0 +1,16 @@
+# Runs the daily scoring and emails on the live site, once a day at 06:00 Bahrain time.
+# The site address and the token are stored as repository secrets, never in this file.
+name: daily job
+on:
+  schedule:
+    - cron: "0 3 * * *"
+  workflow_dispatch:
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - name: call the site
+        run: |
+          curl --fail --silent --show-error --max-time 120 --retry 3 --retry-delay 60 \
+            -X POST -H "X-Task-Token: ${{ secrets.DAILY_TASK_TOKEN }}" \
+            "${{ secrets.SITE_URL }}/tasks/daily/"

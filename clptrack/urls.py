@@ -14,6 +14,7 @@ urlpatterns = [
     path("accounts/", include("django.contrib.auth.urls")),
     path("", include("dashboard.urls")),
     path("", include("progress.urls")),
+    path("", include("risk.urls")),
 ]
 
 if settings.DEBUG:

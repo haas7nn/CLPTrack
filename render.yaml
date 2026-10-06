@@ -1,0 +1,23 @@
+# Tells Render how to build and run the site. The database lives on Neon, see README.
+services:
+  - type: web
+    name: clptrack
+    runtime: python
+    plan: free
+    buildCommand: ./build.sh
+    startCommand: gunicorn clptrack.wsgi --log-file -
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.6
+      - key: DEBUG
+        value: "0"
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DAILY_TASK_TOKEN
+        generateValue: true
+      - key: ALLOWED_HOSTS
+        sync: false
+      - key: CSRF_TRUSTED_ORIGINS
+        sync: false
+      - key: DATABASE_URL
+        sync: false

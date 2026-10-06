@@ -156,6 +156,9 @@ STORAGES = {
     "staticfiles": {"BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage"},
 }
 
+# the secret the daily GitHub workflow must send, empty means the address is switched off
+DAILY_TASK_TOKEN = os.environ.get("DAILY_TASK_TOKEN", "")
+
 CSRF_TRUSTED_ORIGINS = [o for o in os.environ.get("CSRF_TRUSTED_ORIGINS", "").split(",") if o]
 
 if not DEBUG:

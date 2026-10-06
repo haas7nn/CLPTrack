@@ -56,3 +56,22 @@ class RiskScoreTests(TestCase):
 
     def test_weights_add_up_to_one_hundred(self):
         self.assertEqual(sum(scoring.weights().values()), 100)
+
+
+class DailyTaskUrlTests(TestCase):
+    """The daily address only works with the secret token."""
+
+    def test_wrong_or_missing_token_is_refused(self):
+        with self.settings(DAILY_TASK_TOKEN="secret"):
+            self.assertEqual(self.client.post("/tasks/daily/").status_code, 403)
+            self.assertEqual(self.client.post("/tasks/daily/", HTTP_X_TASK_TOKEN="nope").status_code, 403)
+
+    def test_no_token_configured_means_switched_off(self):
+        with self.settings(DAILY_TASK_TOKEN=""):
+            self.assertEqual(self.client.post("/tasks/daily/", HTTP_X_TASK_TOKEN="").status_code, 403)
+
+    def test_right_token_runs_the_job(self):
+        with self.settings(DAILY_TASK_TOKEN="secret"):
+            response = self.client.post("/tasks/daily/", HTTP_X_TASK_TOKEN="secret")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(self.client.get("/tasks/daily/").status_code, 405)
