@@ -1,5 +1,8 @@
 """Pages for handing in work, recording meetings and leaving feedback."""
 from django.contrib import messages
+from django.contrib.auth.decorators import login_required
+from django.core.exceptions import PermissionDenied
+from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_POST
@@ -7,7 +10,7 @@ from django.views.decorators.http import require_POST
 from accounts.models import User
 from dashboard.views import role_required, timeline_for
 from .forms import FeedbackForm, MeetingForm, SubmissionForm
-from .models import Action, Deliverable, Meeting
+from .models import Action, Deliverable, Meeting, Submission
 
 
 @role_required("student")
@@ -16,10 +19,12 @@ def submit(request, deliverable_id):
     deliverable = get_object_or_404(Deliverable, pk=deliverable_id)
     form = SubmissionForm(request.POST or None, request.FILES or None)
     if request.method == "POST" and form.is_valid():
-        submission = form.save(commit=False)
-        submission.student = request.user
-        submission.deliverable = deliverable
-        submission.save()
+        f = form.cleaned_data["file"]
+        Submission.objects.create(
+            student=request.user, deliverable=deliverable,
+            filename=f.name, content_type=f.content_type or "application/octet-stream",
+            size=f.size, data=f.read(), note=form.cleaned_data["note"],
+        )
         messages.success(request, f"Your file for {deliverable.title} was uploaded.")
         return redirect("student_home")
     return render(request, "progress/submit.html", {"form": form, "deliverable": deliverable})
@@ -75,3 +80,16 @@ def student_detail(request, student_id):
         # the chart needs plain lists, one of dates and one of scores
         "chart": {"labels": [h["scored_on"].strftime("%d %b") for h in history], "scores": [h["score"] for h in history]},
     })
+
+
+@login_required
+def download(request, submission_id):
+    """Sends a submitted file back. Only the student, their supervisor or the coordinator may open it."""
+    submission = get_object_or_404(Submission.objects.select_related("student"), pk=submission_id)
+    user = request.user
+    allowed = (user == submission.student or user == submission.student.supervisor or user.is_coordinator)
+    if not allowed:
+        raise PermissionDenied
+    response = HttpResponse(bytes(submission.data), content_type=submission.content_type or "application/octet-stream")
+    response["Content-Disposition"] = f'attachment; filename="{submission.filename}"'
+    return response

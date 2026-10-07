@@ -1,4 +1,5 @@
 """Tests for uploading, meetings, feedback and the daily scoring."""
+from datetime import timedelta
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core.management import call_command
 from django.test import TestCase
@@ -66,3 +67,34 @@ class ProgressTests(TestCase):
         row = RiskScore.objects.get(student=self.student)
         self.assertIn(row.status, ["green", "amber", "red"])
         self.assertIn("overdue", row.breakdown)
+
+
+class DownloadTests(TestCase):
+    def setUp(self):
+        self.supervisor = User.objects.create_user("sup", role="supervisor", password="x")
+        self.other = User.objects.create_user("sup2", role="supervisor", password="x")
+        self.student = User.objects.create_user("stu", role="student", password="x", supervisor=self.supervisor)
+        self.deliverable = Deliverable.objects.create(title="Thesis", order=8, due_at=timezone.now() + timedelta(days=5))
+        self.submission = Submission.objects.create(student=self.student, deliverable=self.deliverable,
+                                                    filename="thesis.pdf", content_type="application/pdf",
+                                                    size=9, data=b"%PDF-1.4 x")
+
+    def test_student_and_own_supervisor_can_download(self):
+        for name in ("stu", "sup"):
+            self.client.login(username=name, password="x")
+            response = self.client.get(reverse("download", args=[self.submission.id]))
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(response.content, b"%PDF-1.4 x")
+            self.assertIn("thesis.pdf", response["Content-Disposition"])
+
+    def test_other_supervisor_cannot_download(self):
+        self.client.login(username="sup2", password="x")
+        self.assertEqual(self.client.get(reverse("download", args=[self.submission.id])).status_code, 403)
+
+    def test_file_bytes_are_kept_in_the_database(self):
+        self.client.login(username="stu", password="x")
+        pdf = SimpleUploadedFile("draft.pdf", b"%PDF-1.4 draft", content_type="application/pdf")
+        self.client.post(reverse("submit", args=[self.deliverable.id]), {"file": pdf})
+        saved = Submission.objects.get(filename="draft.pdf")
+        self.assertEqual(bytes(saved.data), b"%PDF-1.4 draft")
+        self.assertEqual(saved.size, len(b"%PDF-1.4 draft"))

@@ -7,10 +7,9 @@ ALLOWED_TYPES = (".pdf", ".doc", ".docx", ".ppt", ".pptx", ".zip", ".png", ".jpg
 MAX_SIZE_MB = 20
 
 
-class SubmissionForm(forms.ModelForm):
-    class Meta:
-        model = Submission
-        fields = ["file", "note"]
+class SubmissionForm(forms.Form):
+    file = forms.FileField()
+    note = forms.CharField(max_length=300, required=False, label="Note for your supervisor (optional)")
 
     def clean_file(self):
         """Only accept normal document types, and nothing huge."""

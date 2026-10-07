@@ -34,7 +34,11 @@ class Submission(models.Model):
 
     student = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="submissions")
     deliverable = models.ForeignKey(Deliverable, on_delete=models.CASCADE, related_name="submissions")
-    file = models.FileField(upload_to="submissions/%Y/%m/")
+    # the file itself lives in the database, so it survives redeploys on a host with no disk
+    filename = models.CharField(max_length=200, default="")
+    content_type = models.CharField(max_length=100, blank=True)
+    size = models.PositiveIntegerField(default=0)
+    data = models.BinaryField(default=b"")
     note = models.CharField(max_length=300, blank=True)
     submitted_at = models.DateTimeField(default=timezone.now)
 

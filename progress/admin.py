@@ -12,6 +12,8 @@ class DeliverableAdmin(admin.ModelAdmin):
 
 @admin.register(Submission)
 class SubmissionAdmin(admin.ModelAdmin):
+    exclude = ("data",)
+    readonly_fields = ("filename", "content_type", "size")
     list_display = ("student", "deliverable", "submitted_at", "days_late")
     list_filter = ("deliverable",)
 

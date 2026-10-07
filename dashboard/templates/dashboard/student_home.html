@@ -21,7 +21,7 @@
         <span class="badge text-bg-{% if r.status == 'done' %}success{% elif r.status == 'late' %}warning{% elif r.status == 'missing' %}danger{% elif r.status == 'soon' %}warning{% else %}secondary{% endif %}">{{ r.label }}</span>
       </td>
       <td class="text-end">
-        {% if r.submission %}<a class="small" href="{{ r.submission.file.url }}">{{ r.submission.file.name|cut:"submissions/" }}</a>
+        {% if r.submission %}<a class="small" href="{% url 'download' r.submission.id %}">{{ r.submission.filename }}</a>
         {% else %}<a class="btn btn-outline-primary btn-sm" href="{% url 'submit' r.deliverable.id %}">Upload</a>{% endif %}
       </td>
     </tr>

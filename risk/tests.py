@@ -1,7 +1,6 @@
 """Tests for the risk score, including the worked example from the project plan."""
 from datetime import timedelta
 
-from django.core.files.base import ContentFile
 from django.test import TestCase
 from django.utils import timezone
 
@@ -27,7 +26,7 @@ class RiskScoreTests(TestCase):
         due = [Deliverable.objects.create(title=f"D{i}", order=i, due_at=now - (20 - 2 * i) * day) for i in range(4)]
         for d in due[:3]:
             Submission.objects.create(student=self.student, deliverable=d,
-                                      file=ContentFile(b"x", name="a.pdf"),
+                                      filename="a.pdf", data=b"x",
                                       submitted_at=d.due_at + 3 * day)  # three days late each
         # last meeting 16 days ago, with four actions, two still open
         meeting = Meeting.objects.create(student=self.student, held_on=(now - 16 * day).date(), discussed="plan")

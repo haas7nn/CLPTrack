@@ -13,7 +13,7 @@
       {% for r in rows %}
       <tr><td>{{ r.deliverable.title }}</td><td class="text-secondary small">{{ r.deliverable.due_at|date:"j M" }}</td>
         <td><span class="badge text-bg-{% if r.status == 'done' %}success{% elif r.status == 'late' or r.status == 'soon' %}warning{% elif r.status == 'missing' %}danger{% else %}secondary{% endif %}">{{ r.label }}</span></td>
-        <td>{% if r.submission %}<a class="small" href="{{ r.submission.file.url }}">open</a>{% endif %}</td></tr>
+        <td>{% if r.submission %}<a class="small" href="{% url 'download' r.submission.id %}">open</a>{% endif %}</td></tr>
       {% endfor %}
     </table>
     <h2 class="h6 text-uppercase text-secondary mt-4">Meetings</h2>
