@@ -1,0 +1,13 @@
+# Tells Render to deploy after every push to main, through the service's deploy hook.
+# The hook address is a repository secret named RENDER_DEPLOY_HOOK.
+name: deploy
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: ask the host to deploy
+        run: curl --fail --silent --show-error --max-time 60 -X POST "${{ secrets.RENDER_DEPLOY_HOOK }}"
