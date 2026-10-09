@@ -40,8 +40,8 @@ STORIES = {
         (1, "feedback", "Good draft. Tighten the objectives and add the risk table."),
     ],
     "student2": [
-        (4, "submit", (1, "")),
-        (9, "meeting", ("Discussed the topic options", ["Choose a topic", "Write one page summary"], [(0, 6)])),
+        (1, "submit", (1, "")),
+        (12, "meeting", ("Discussed the topic options", ["Choose a topic", "Write one page summary"], [])),
     ],
     "student3": [],
     "student4": [
@@ -53,7 +53,7 @@ STORIES = {
     ],
     "student5": [
         (2, "submit", (1, "Sorry for the delay")),
-        (13, "meeting", ("Discussed the project idea", ["Send the idea in writing", "List the technologies", "Book the next meeting"], [(0, 10)])),
+        (16, "meeting", ("Discussed the project idea", ["Send the idea in writing", "List the technologies", "Book the next meeting"], [(0, 10)])),
     ],
     "student6": [
         (6, "submit", (1, "")),
