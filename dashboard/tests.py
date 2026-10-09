@@ -38,7 +38,7 @@ class PageAccessTests(TestCase):
 
 class CoordinatorTests(TestCase):
     def test_coordinator_sees_every_supervisor_and_student_cannot(self):
-        coordinator = User.objects.create_user("coord", role="coordinator", password="x")
+        User.objects.create_user("coord", role="coordinator", password="x")
         sup = User.objects.create_user("supa", role="supervisor", password="x", first_name="Adeeb", last_name="Sulaiman")
         User.objects.create_user("stu9", role="student", password="x", supervisor=sup, first_name="Mona", last_name="Khalil")
         self.client.login(username="coord", password="x")

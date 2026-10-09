@@ -55,7 +55,7 @@ class ProgressTests(TestCase):
         self.assertEqual(self.student.feedback_received.count(), 1)
 
     def test_supervisor_cannot_open_someone_elses_student(self):
-        other_sup = User.objects.create_user("sup2", role="supervisor", password="x")
+        User.objects.create_user("sup2", role="supervisor", password="x")
         self.client.login(username="sup2", password="x")
         response = self.client.get(reverse("student_detail", args=[self.student.id]))
         self.assertEqual(response.status_code, 404)

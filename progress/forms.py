@@ -1,7 +1,7 @@
 """The forms people fill in: upload work, record a meeting, leave feedback."""
 from django import forms
 
-from .models import Feedback, Meeting, Submission
+from .models import Feedback, Meeting
 
 ALLOWED_TYPES = (".pdf", ".doc", ".docx", ".ppt", ".pptx", ".zip", ".png", ".jpg", ".jpeg")
 MAX_SIZE_MB = 20

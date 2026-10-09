@@ -10,7 +10,7 @@ from django.views.decorators.http import require_POST
 from accounts.models import User
 from dashboard.views import role_required, timeline_for
 from .forms import FeedbackForm, MeetingForm, SubmissionForm
-from .models import Action, Deliverable, Meeting, Submission
+from .models import Action, Deliverable, Submission
 
 
 @role_required("student")

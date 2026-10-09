@@ -4,7 +4,6 @@
 /accounts/  sign in and sign out, also from Django
 /           our own pages, listed in dashboard/urls.py
 """
-from django.conf import settings
 from django.contrib import admin
 from django.urls import include, path
 

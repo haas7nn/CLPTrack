@@ -41,3 +41,16 @@ starts the site with gunicorn. The database is a free Neon Postgres, pasted in a
 The daily job (scores, then emails) is triggered by the GitHub workflow in `.github/workflows/daily.yml`,
 which posts to `/tasks/daily/` with the secret token every morning. Two repository secrets are needed:
 `SITE_URL` (the site address without a trailing slash) and `DAILY_TASK_TOKEN` (the same value as on Render).
+
+## Walkthroughs
+
+The `docs/` folder has six plain English notes, one per part of the system, each ending with the
+questions an examiner might ask. Read them in order.
+
+## Workflows
+
+- `deploy.yml` tells Render to deploy after every push to main.
+- `daily.yml` runs the daily scoring and emails at 06:00 Bahrain time.
+- `test-email.yml` sends one test email from the live site, run it by hand with an address.
+
+Email goes through Brevo's API when `BREVO_API_KEY` is set, because the host blocks mail ports.

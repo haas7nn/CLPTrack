@@ -11,7 +11,7 @@ add the five up to get a score out of 100.
 The weights, the cut off points and the semester start date can be changed in
 settings.py without touching this file.
 """
-from datetime import date, timedelta
+from datetime import date
 
 from django.conf import settings
 from django.utils import timezone
