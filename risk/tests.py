@@ -74,3 +74,14 @@ class DailyTaskUrlTests(TestCase):
             response = self.client.post("/tasks/daily/", HTTP_X_TASK_TOKEN="secret")
         self.assertEqual(response.status_code, 200)
         self.assertEqual(self.client.get("/tasks/daily/").status_code, 405)
+
+
+class TestEmailUrlTests(TestCase):
+    def test_sends_one_email_with_the_token_and_refuses_without(self):
+        from django.core import mail
+        with self.settings(DAILY_TASK_TOKEN="secret"):
+            self.assertEqual(self.client.post("/tasks/test-email/", {"to": "me@example.com"}).status_code, 403)
+            response = self.client.post("/tasks/test-email/", {"to": "me@example.com"}, HTTP_X_TASK_TOKEN="secret")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertEqual(mail.outbox[0].to, ["me@example.com"])
