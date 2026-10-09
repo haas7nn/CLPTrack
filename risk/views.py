@@ -39,6 +39,16 @@ def test_email(request):
     to = request.POST.get("to", "")
     if not to:
         return HttpResponse("give an address in the field named to", status=400)
-    sent = send_mail("CLPTrack test email", "If you can read this, the live site can send email.\n\nCLPTrack",
-                     settings.DEFAULT_FROM_EMAIL, [to])
-    return HttpResponse(f"sent {sent}")
+    try:
+        sent = send_mail("CLPTrack test email", "If you can read this, the live site can send email.\n\nCLPTrack",
+                         settings.DEFAULT_FROM_EMAIL, [to])
+    except Exception as e:  # say what went wrong instead of a bare 500, the host has no shell to look
+        detail = getattr(e, "reason", "") or ""
+        body = ""
+        if hasattr(e, "read"):
+            try:
+                body = e.read().decode()[:300]
+            except Exception:
+                body = ""
+        return HttpResponse(f"failed: {type(e).__name__}: {e} {detail} {body}"[:600], status=502)
+    return HttpResponse(f"sent {sent}, backend {settings.MAILERS['default']['BACKEND'].rsplit('.', 1)[-1]}")

@@ -13,7 +13,7 @@ jobs:
     steps:
       - name: ask the site to send a test email
         run: |
-          curl --fail --silent --show-error --max-time 120 \
+          curl --silent --show-error --max-time 120 -w "\nHTTP %{http_code}\n" \
             -X POST -H "X-Task-Token: ${{ secrets.DAILY_TASK_TOKEN }}" \
             --data-urlencode "to=${{ inputs.to }}" \
             "${{ secrets.SITE_URL }}/tasks/test-email/"
