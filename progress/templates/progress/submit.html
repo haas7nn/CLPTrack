@@ -2,9 +2,9 @@
 {% block title %}Upload, CLPTrack{% endblock %}
 {% block content %}
 <div class="row justify-content-center"><div class="col-md-6">
-  <div class="card shadow-sm"><div class="card-body p-4">
-    <h1 class="h5">Upload for {{ deliverable.title }}</h1>
-    <p class="text-secondary small">Due {{ deliverable.due_at|date:"D j M Y, H:i" }}</p>
+  <div class="card"><div class="card-body p-4">
+    <h1 class="page-title fs-5">Upload for {{ deliverable.title }}</h1>
+    <p class="muted small">Due {{ deliverable.due_at|date:"l j F Y, H:i" }}</p>
     <form method="post" enctype="multipart/form-data">{% csrf_token %}
       {% if form.non_field_errors %}<div class="alert alert-danger">{{ form.non_field_errors }}</div>{% endif %}
       <div class="mb-3">
@@ -16,7 +16,7 @@
         <label class="form-label" for="id_note">Note for your supervisor (optional)</label>
         <input class="form-control" type="text" name="note" id="id_note" maxlength="300" value="{{ form.note.value|default:'' }}">
       </div>
-      <button class="btn btn-primary">Upload</button>
+      <button class="btn btn-navy">Upload</button>
       <a class="btn btn-link" href="{% url 'student_home' %}">Cancel</a>
     </form>
   </div></div>

@@ -62,9 +62,18 @@ def timeline_for(student, now=None):
 
 @role_required("student")
 def student_home(request):
-    rows = timeline_for(request.user)
+    now = timezone.now()
+    rows = timeline_for(request.user, now)
     latest = RiskScore.objects.filter(student=request.user).first()
-    return render(request, "dashboard/student_home.html", {"rows": rows, "risk": latest})
+    upcoming = [r for r in rows if r["status"] in ("soon", "upcoming")]
+    next_row = None
+    if upcoming:
+        next_row = dict(upcoming[0], days_left=(upcoming[0]["deliverable"].due_at - now).days)
+    return render(request, "dashboard/student_home.html", {
+        "rows": rows, "risk": latest, "next_row": next_row,
+        "submitted_count": sum(1 for r in rows if r["status"] in ("done", "late")),
+        "missing_count": sum(1 for r in rows if r["status"] == "missing"),
+    })
 
 
 def summary_for(student, now, due_count):

@@ -1,44 +1,51 @@
 {% extends "base.html" %}
 {% block title %}{{ student.get_full_name }}, CLPTrack{% endblock %}
 {% block content %}
-<div class="d-flex justify-content-between align-items-end mb-3">
-  <div><a class="small" href="{% url 'supervisor_home' %}">&larr; My students</a>
-    <h1 class="h4 mb-0">{{ student.get_full_name|default:student.username }} <span class="text-secondary fs-6">{{ student.student_id }}, section {{ student.section }}</span></h1></div>
-  {% if risk %}<span class="badge rounded-pill text-bg-{% if risk.status == 'green' %}success{% elif risk.status == 'amber' %}warning{% else %}danger{% endif %}">{{ risk.get_status_display }}, score {{ risk.score }}</span>{% endif %}
-</div>
+<a class="small d-inline-block mb-2" href="{% url 'supervisor_home' %}">&larr; My students</a>
+<div class="card mb-4"><div class="card-body p-4 d-flex justify-content-between align-items-center">
+  <div>
+    <h1 class="page-title">{{ student.get_full_name|default:student.username }}</h1>
+    <div class="muted">{{ student.student_id }} &middot; section {{ student.section }}</div>
+  </div>
+  {% if risk %}<span class="status status-{{ risk.status }} fs-6">{{ risk.get_status_display }}, score {{ risk.score }}</span>{% endif %}
+</div></div>
+
 <div class="row g-4">
   <div class="col-lg-7">
-    <h2 class="h6 text-uppercase text-secondary">Deliverables</h2>
-    <table class="table table-sm bg-white shadow-sm">
+    <h2 class="section-title">Deliverables</h2>
+    <div class="card mb-4">
       {% for r in rows %}
-      <tr><td>{{ r.deliverable.title }}</td><td class="text-secondary small">{{ r.deliverable.due_at|date:"j M" }}</td>
-        <td><span class="badge text-bg-{% if r.status == 'done' %}success{% elif r.status == 'late' or r.status == 'soon' %}warning{% elif r.status == 'missing' %}danger{% else %}secondary{% endif %}">{{ r.label }}</span></td>
-        <td>{% if r.submission %}<a class="small" href="{% url 'download' r.submission.id %}">open</a>{% endif %}</td></tr>
+      <div class="tl-row compact {% if forloop.last %}last{% endif %}">
+        <div class="row-tile small tile-{% if r.status == 'done' %}green{% elif r.status == 'late' %}amber{% elif r.status == 'missing' %}red{% elif r.status == 'soon' %}orange{% else %}grey{% endif %}"></div>
+        <div class="flex-grow-1"><div class="tl-title">{{ r.deliverable.title }}</div><div class="muted small">{{ r.deliverable.due_at|date:"j M" }}</div></div>
+        <span class="status status-{% if r.status == 'done' %}green{% elif r.status == 'late' or r.status == 'soon' %}amber{% elif r.status == 'missing' %}red{% else %}none{% endif %}">{{ r.label }}</span>
+        <div class="tl-action">{% if r.submission %}<a class="small" href="{% url 'download' r.submission.id %}">open</a>{% endif %}</div>
+      </div>
       {% endfor %}
-    </table>
-    <h2 class="h6 text-uppercase text-secondary mt-4">Meetings</h2>
+    </div>
+    <h2 class="section-title">Meetings</h2>
     {% for m in meetings %}
-    <div class="card shadow-sm mb-2"><div class="card-body py-2">
-      <div class="fw-semibold small">{{ m.held_on|date:"j F Y" }}</div>
-      <div class="small">{{ m.discussed|linebreaksbr }}</div>
-      {% for a in m.actions.all %}<div class="small {% if a.done %}text-secondary text-decoration-line-through{% endif %}">&bull; {{ a.description }}</div>{% endfor %}
+    <div class="card mb-3"><div class="card-body">
+      <div class="fw-semibold">{{ m.held_on|date:"l j F Y" }}</div>
+      <div class="muted">{{ m.discussed|linebreaksbr }}</div>
+      {% for a in m.actions.all %}<div class="small mt-1 {% if a.done %}muted text-decoration-line-through{% endif %}">&bull; {{ a.description }}</div>{% endfor %}
     </div></div>
-    {% empty %}<p class="text-secondary small">No meetings recorded.</p>{% endfor %}
+    {% empty %}<p class="muted">No meetings recorded.</p>{% endfor %}
   </div>
   <div class="col-lg-5">
     {% if risk %}{% include "risk/_breakdown.html" %}
-    {% if chart.scores|length > 1 %}<div class="card shadow-sm mb-3"><div class="card-body"><canvas id="history" height="110"></canvas></div></div>{% endif %}
+    {% if chart.scores|length > 1 %}<div class="card mb-4"><div class="card-body p-4"><h2 class="section-title">Score over the semester</h2><canvas id="history" height="110"></canvas></div></div>{% endif %}
     {% endif %}
-    <div class="card shadow-sm"><div class="card-body">
-      <h2 class="h6">Leave feedback</h2>
-      <form method="post">{% csrf_token %}{{ form.text }}<button class="btn btn-primary btn-sm mt-2">Save</button></form>
+    <div class="card mb-3"><div class="card-body p-4">
+      <h2 class="section-title">Leave feedback</h2>
+      <form method="post">{% csrf_token %}{{ form.text }}<button class="btn btn-navy btn-sm mt-3">Save</button></form>
     </div></div>
     {% for f in feedback %}
-    <div class="card mt-2"><div class="card-body py-2 small"><div class="text-secondary">{{ f.created_at|date:"j M Y" }}</div>{{ f.text|linebreaksbr }}</div></div>
+    <div class="card mb-2"><div class="card-body py-3"><div class="muted small">{{ f.created_at|date:"j M Y" }}</div>{{ f.text|linebreaksbr }}</div></div>
     {% endfor %}
   </div>
 </div>
-<style>#id_text{width:100%;padding:.375rem .75rem;border:1px solid #dee2e6;border-radius:.375rem}</style>
+<style>#id_text{width:100%;padding:.5rem .75rem;border:1px solid #d9e0ea;border-radius:8px}</style>
 {{ chart|json_script:"chart-data" }}
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
 <script>
@@ -46,8 +53,8 @@
   const data = JSON.parse(document.getElementById("chart-data").textContent);
   const canvas = document.getElementById("history");
   if (canvas && data.scores.length > 1) {
-    new Chart(canvas, {type: "line", data: {labels: data.labels, datasets: [{label: "Risk score", data: data.scores, tension: 0.3}]},
-      options: {scales: {y: {min: 0, max: 100}}, plugins: {legend: {display: false}}}});
+    new Chart(canvas, {type: "line", data: {labels: data.labels, datasets: [{label: "Risk score", data: data.scores, tension: 0.3, borderColor: "#0f2b59", backgroundColor: "rgba(15,43,89,.08)", fill: true, pointRadius: 2}]},
+      options: {scales: {y: {min: 0, max: 100, grid: {color: "#eef1f6"}}, x: {grid: {display: false}}}, plugins: {legend: {display: false}}}});
   }
 </script>
 {% endblock %}

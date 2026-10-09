@@ -1,35 +1,36 @@
 {% extends "base.html" %}
 {% block title %}Meetings, CLPTrack{% endblock %}
 {% block content %}
+<h1 class="page-title mb-3">Meetings</h1>
 <div class="row g-4">
   <div class="col-md-5">
-    <div class="card shadow-sm"><div class="card-body p-4">
-      <h1 class="h5">Record a meeting</h1>
+    <div class="card"><div class="card-body p-4">
+      <h2 class="section-title">Record a meeting</h2>
       <form method="post">{% csrf_token %}
         <div class="mb-3"><label class="form-label" for="id_held_on">Date</label>{{ form.held_on }}
           {% for e in form.held_on.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}</div>
         <div class="mb-3"><label class="form-label" for="id_discussed">What was discussed</label>{{ form.discussed }}
           {% for e in form.discussed.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}</div>
         <div class="mb-3"><label class="form-label" for="id_actions">Agreed actions, one per line</label>{{ form.actions }}</div>
-        <button class="btn btn-primary">Save meeting</button>
+        <button class="btn btn-navy">Save meeting</button>
       </form>
     </div></div>
   </div>
   <div class="col-md-7">
-    <h2 class="h5">My meetings</h2>
+    <h2 class="section-title">My meetings</h2>
     {% for m in meetings %}
-    <div class="card shadow-sm mb-3"><div class="card-body">
+    <div class="card mb-3"><div class="card-body p-4">
       <div class="fw-semibold">{{ m.held_on|date:"l j F Y" }}</div>
-      <p class="mb-2">{{ m.discussed|linebreaksbr }}</p>
+      <p class="muted mb-2">{{ m.discussed|linebreaksbr }}</p>
       {% for a in m.actions.all %}
-      <div class="d-flex align-items-center gap-2 small">
-        {% if a.done %}<span class="text-success">&#10003;</span> <span class="text-decoration-line-through text-secondary">{{ a.description }}</span>
-        {% else %}<form method="post" action="{% url 'action_done' a.id %}" class="d-inline">{% csrf_token %}<button class="btn btn-outline-success btn-sm py-0">done</button></form> {{ a.description }}{% endif %}
+      <div class="d-flex align-items-center gap-2 small mb-1">
+        {% if a.done %}<span class="row-tile tiny tile-green"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M4 12.5l5 5L20 6.5"/></svg></span> <span class="text-decoration-line-through muted">{{ a.description }}</span>
+        {% else %}<form method="post" action="{% url 'action_done' a.id %}" class="d-inline">{% csrf_token %}<button class="btn btn-outline-navy btn-sm py-0">Done</button></form> {{ a.description }}{% endif %}
       </div>
       {% endfor %}
     </div></div>
-    {% empty %}<p class="text-secondary">No meetings recorded yet.</p>{% endfor %}
+    {% empty %}<p class="muted">No meetings recorded yet.</p>{% endfor %}
   </div>
 </div>
-<style>#id_held_on,#id_discussed,#id_actions{width:100%}#id_held_on{padding:.375rem .75rem;border:1px solid #dee2e6;border-radius:.375rem}#id_discussed,#id_actions{padding:.375rem .75rem;border:1px solid #dee2e6;border-radius:.375rem}</style>
+<style>#id_held_on,#id_discussed,#id_actions{width:100%;padding:.5rem .75rem;border:1px solid #d9e0ea;border-radius:8px}</style>
 {% endblock %}

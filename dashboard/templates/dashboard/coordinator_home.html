@@ -1,25 +1,25 @@
 {% extends "base.html" %}
 {% block title %}Cohort, CLPTrack{% endblock %}
 {% block content %}
-<div class="d-flex align-items-center mb-3">
-  <h1 class="h4 mb-0">The whole cohort</h1>
-  <a class="btn btn-outline-secondary btn-sm ms-auto" href="{% url 'export_csv' %}">Download as spreadsheet</a>
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h1 class="page-title">The whole cohort</h1>
+  <a class="btn btn-outline-navy btn-sm" href="{% url 'export_csv' %}">Download as spreadsheet</a>
 </div>
 {% for g in groups %}
-<div class="card shadow-sm mb-3"><div class="card-body">
-  <div class="d-flex justify-content-between align-items-center mb-2">
-    <h2 class="h6 mb-0">{{ g.supervisor.get_full_name|default:g.supervisor.username }} <span class="text-secondary">({{ g.total }} students)</span></h2>
+<div class="card mb-3"><div class="card-body p-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h2 class="section-title mb-0">{{ g.supervisor.get_full_name|default:g.supervisor.username }} <span class="muted fw-normal">{{ g.total }} students</span></h2>
     <div class="d-flex gap-2">
-      <span class="badge rounded-pill text-bg-success">{{ g.counts.green }}</span>
-      <span class="badge rounded-pill text-bg-warning">{{ g.counts.amber }}</span>
-      <span class="badge rounded-pill text-bg-danger">{{ g.counts.red }}</span>
+      <span class="status status-green">{{ g.counts.green }} on track</span>
+      <span class="status status-amber">{{ g.counts.amber }} attention</span>
+      <span class="status status-red">{{ g.counts.red }} at risk</span>
     </div>
   </div>
   <div class="d-flex flex-wrap gap-2">
     {% for r in g.rows %}
-    <span class="badge text-bg-{% if r.risk.status == 'green' %}success{% elif r.risk.status == 'amber' %}warning{% elif r.risk.status == 'red' %}danger{% else %}light text-dark border{% endif %} fw-normal">{{ r.user.get_full_name|default:r.user.username }}{% if r.risk %} {{ r.risk.score }}{% endif %}</span>
-    {% empty %}<span class="text-secondary small">No students assigned.</span>{% endfor %}
+    <span class="chip chip-{% if r.risk %}{{ r.risk.status }}{% else %}none{% endif %}">{{ r.user.get_full_name|default:r.user.username }}{% if r.risk %} <b>{{ r.risk.score }}</b>{% endif %}</span>
+    {% empty %}<span class="muted small">No students assigned.</span>{% endfor %}
   </div>
 </div></div>
-{% empty %}<p class="text-secondary">No supervisors yet.</p>{% endfor %}
+{% empty %}<p class="muted">No supervisors yet.</p>{% endfor %}
 {% endblock %}

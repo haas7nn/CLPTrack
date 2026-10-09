@@ -1,11 +1,14 @@
 {% extends "base.html" %}
 {% block title %}Sign in, CLPTrack{% endblock %}
 {% block content %}
-<div class="row justify-content-center">
-  <div class="col-md-5">
-    <div class="card shadow-sm">
+<div class="row justify-content-center mt-5">
+  <div class="col-md-4">
+    <div class="card">
       <div class="card-body p-4">
-        <h1 class="h4 mb-3">Sign in</h1>
+        <div class="d-flex align-items-center gap-3 mb-3">
+          <div class="row-tile tile-navy"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="3.5" width="16" height="17" rx="2.5"/><path d="M8 9h8M8 13h8M8 17h5"/></svg></div>
+          <div><h1 class="page-title fs-5 mb-0">Sign in to CLPTrack</h1><div class="muted small">CLP supervision</div></div>
+        </div>
         {% if form.errors %}<div class="alert alert-danger">The username or password is not correct.</div>{% endif %}
         <form method="post">{% csrf_token %}
           <div class="mb-3">
@@ -17,7 +20,7 @@
             <input class="form-control" type="password" name="password" id="id_password" required>
           </div>
           <input type="hidden" name="next" value="{{ next }}">
-          <button class="btn btn-primary w-100">Sign in</button>
+          <button class="btn btn-navy w-100">Sign in</button>
         </form>
       </div>
     </div>

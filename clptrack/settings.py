@@ -151,7 +151,9 @@ DATABASES["default"] = dj_database_url.config(default=f"sqlite:///{BASE_DIR / 'd
 STATIC_ROOT = BASE_DIR / "staticfiles"
 STORAGES = {
     "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
-    "staticfiles": {"BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage"},
+    # on the host the files get hashed names and long cache headers, on the laptop they are served as they are
+    "staticfiles": {"BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage" if not DEBUG
+                    else "django.contrib.staticfiles.storage.StaticFilesStorage"},
 }
 
 # the secret the daily GitHub workflow must send, empty means the address is switched off

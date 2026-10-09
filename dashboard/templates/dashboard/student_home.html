@@ -1,34 +1,59 @@
 {% extends "base.html" %}
 {% block title %}My timeline, CLPTrack{% endblock %}
 {% block content %}
-<div class="d-flex justify-content-between align-items-end mb-3">
-  <h1 class="h4 mb-0">My CLP timeline</h1>
-  {% if risk %}
-  <span class="badge rounded-pill text-bg-{% if risk.status == 'green' %}success{% elif risk.status == 'amber' %}warning{% else %}danger{% endif %}">
-    Status {{ risk.get_status_display }}, score {{ risk.score }}
-  </span>
-  {% endif %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h1 class="page-title">My CLP timeline</h1>
+  {% if risk %}<span class="status status-{{ risk.status }}">{{ risk.get_status_display }}, score {{ risk.score }}</span>{% endif %}
 </div>
-<table class="table table-hover bg-white shadow-sm">
-  <thead><tr><th>#</th><th>Deliverable</th><th>Due</th><th>Status</th><th></th></tr></thead>
-  <tbody>
-  {% for r in rows %}
-    <tr>
-      <td>{{ r.deliverable.order }}</td>
-      <td>{{ r.deliverable.title }}</td>
-      <td>{{ r.deliverable.due_at|date:"D j M Y, H:i" }}</td>
-      <td>
-        <span class="badge text-bg-{% if r.status == 'done' %}success{% elif r.status == 'late' %}warning{% elif r.status == 'missing' %}danger{% elif r.status == 'soon' %}warning{% else %}secondary{% endif %}">{{ r.label }}</span>
-      </td>
-      <td class="text-end">
-        {% if r.submission %}<a class="small" href="{% url 'download' r.submission.id %}">{{ r.submission.filename }}</a>
-        {% else %}<a class="btn btn-outline-primary btn-sm" href="{% url 'submit' r.deliverable.id %}">Upload</a>{% endif %}
-      </td>
-    </tr>
-  {% empty %}
-    <tr><td colspan="5" class="text-secondary">No deliverables have been set up yet.</td></tr>
-  {% endfor %}
-  </tbody>
-</table>
-{% if risk %}<div class="row"><div class="col-lg-6">{% include "risk/_breakdown.html" %}</div></div>{% endif %}
+
+<div class="card mb-4">
+  <div class="stat-strip">
+    {% with done=rows|length %}
+    <div class="stat">
+      <div class="tile tile-navy"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="3.5" width="16" height="17" rx="2.5"/><path d="M8 9h8M8 13h8M8 17h5"/></svg></div>
+      <div><div class="num">{{ done }}</div><div class="label">Deliverables</div></div>
+    </div>
+    {% endwith %}
+    <div class="stat">
+      <div class="tile tile-green"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M4 12.5l5 5L20 6.5"/></svg></div>
+      <div><div class="num">{{ submitted_count }}</div><div class="label">Submitted</div></div>
+    </div>
+    <div class="stat">
+      <div class="tile tile-red"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 3l9.5 17h-19z"/><path d="M12 10v4M12 17.5v.5"/></svg></div>
+      <div><div class="num">{{ missing_count }}</div><div class="label">Missing</div></div>
+    </div>
+    <div class="stat">
+      <div class="tile tile-orange"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg></div>
+      <div><div class="num">{% if next_row %}{{ next_row.days_left }}{% else %}0{% endif %}</div><div class="label">Days to next deadline</div></div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-4">
+  <div class="col-lg-8">
+    <div class="card">
+      {% for r in rows %}
+      <div class="tl-row {% if forloop.last %}last{% endif %}">
+        <div class="row-tile tile-{% if r.status == 'done' %}green{% elif r.status == 'late' %}amber{% elif r.status == 'missing' %}red{% elif r.status == 'soon' %}orange{% else %}grey{% endif %}">
+          {% if r.status == 'done' or r.status == 'late' %}<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M4 12.5l5 5L20 6.5"/></svg>
+          {% elif r.status == 'missing' %}<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M6 6l12 12M18 6L6 18"/></svg>
+          {% else %}<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 16V5M7 10l5-5 5 5M4 19h16"/></svg>{% endif %}
+        </div>
+        <div class="flex-grow-1">
+          <div class="tl-title">{{ r.deliverable.order }}. {{ r.deliverable.title }}</div>
+          <div class="muted small">Due {{ r.deliverable.due_at|date:"l j F Y, H:i" }}</div>
+        </div>
+        <span class="status status-{% if r.status == 'done' %}green{% elif r.status == 'late' or r.status == 'soon' %}amber{% elif r.status == 'missing' %}red{% else %}none{% endif %}">{{ r.label }}</span>
+        <div class="tl-action">
+          {% if r.submission %}<a class="small" href="{% url 'download' r.submission.id %}">{{ r.submission.filename }}</a>
+          {% else %}<a class="btn btn-outline-navy btn-sm" href="{% url 'submit' r.deliverable.id %}">Upload</a>{% endif %}
+        </div>
+      </div>
+      {% empty %}<div class="p-4 muted">No deliverables have been set up yet.</div>{% endfor %}
+    </div>
+  </div>
+  <div class="col-lg-4">
+    {% if risk %}{% include "risk/_breakdown.html" %}{% endif %}
+  </div>
+</div>
 {% endblock %}
