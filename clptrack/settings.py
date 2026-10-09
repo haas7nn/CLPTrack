@@ -169,8 +169,13 @@ if not DEBUG:
     SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
     SECURE_HSTS_SECONDS = 60 * 60 * 24 * 30
 
-# Real email on the host: set EMAIL_HOST, EMAIL_HOST_USER and EMAIL_HOST_PASSWORD there.
-if os.environ.get("EMAIL_HOST"):
+# Real email on the host. Preferred: BREVO_API_KEY, which sends over HTTPS (mail ports are blocked there).
+BREVO_API_KEY = os.environ.get("BREVO_API_KEY", "")
+if BREVO_API_KEY:
+    MAILERS = {"default": {"BACKEND": "notifications.brevo.BrevoEmailBackend"}}
+    DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", DEFAULT_FROM_EMAIL)
+# Fallback: a plain mail server, with a short timeout so a blocked port cannot hang a worker.
+elif os.environ.get("EMAIL_HOST"):
     MAILERS = {"default": {
         "BACKEND": "django.core.mail.backends.smtp.EmailBackend",
         "OPTIONS": {
@@ -179,6 +184,7 @@ if os.environ.get("EMAIL_HOST"):
             "username": os.environ.get("EMAIL_HOST_USER", ""),
             "password": os.environ.get("EMAIL_HOST_PASSWORD", ""),
             "use_tls": True,
+            "timeout": 10,
         },
     }}
     DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", DEFAULT_FROM_EMAIL)

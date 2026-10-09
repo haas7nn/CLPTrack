@@ -47,3 +47,32 @@ class EmailTests(TestCase):
         RiskScore.objects.create(student=self.student, scored_on=today - timedelta(days=1), score=40, status="amber")
         RiskScore.objects.create(student=self.student, scored_on=today, score=45, status="amber")
         self.assertEqual(emails.send_status_alerts(today), 0)
+
+
+class BrevoBackendTests(TestCase):
+    def test_one_request_per_message_with_sender_and_recipient(self):
+        from unittest import mock
+        from django.core.mail import EmailMessage
+        from notifications.brevo import BrevoEmailBackend
+        calls = []
+
+        class FakeResponse:
+            status = 201
+            def __enter__(self): return self
+            def __exit__(self, *a): return False
+
+        def fake_urlopen(request, timeout=0):
+            calls.append((request.full_url, request.get_header("Api-key"), json.loads(request.data)))
+            return FakeResponse()
+
+        import json
+        with self.settings(BREVO_API_KEY="key-for-test", DEFAULT_FROM_EMAIL="CLPTrack <from@example.com>"):
+            with mock.patch("urllib.request.urlopen", fake_urlopen):
+                n = BrevoEmailBackend().send_messages([EmailMessage("Hello", "Body", "CLPTrack <from@example.com>", ["to@example.com"])])
+        self.assertEqual(n, 1)
+        url, key, payload = calls[0]
+        self.assertIn("api.brevo.com", url)
+        self.assertEqual(key, "key-for-test")
+        self.assertEqual(payload["sender"], {"email": "from@example.com", "name": "CLPTrack"})
+        self.assertEqual(payload["to"], [{"email": "to@example.com"}])
+        self.assertEqual(payload["subject"], "Hello")
