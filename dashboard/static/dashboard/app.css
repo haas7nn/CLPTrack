@@ -21,14 +21,14 @@ a { color: var(--navy); }
 .topbar .nav-link:hover { opacity: 1; }
 .topbar .nav-link.active { opacity: 1; color: var(--orange); border-bottom-color: var(--orange); font-weight: 600; }
 .topbar .who { color: rgba(255, 255, 255, 0.85); font-size: 0.9rem; }
-.topbar .btn-signout { color: #fff; border-color: rgba(255, 255, 255, 0.5); }
+.topbar .btn-signout { color: #fff; border-color: rgba(255, 255, 255, 0.5); border-radius: 6px; }
 .topbar .btn-signout:hover { background: #fff; color: var(--navy); }
 
 /* cards and stat strip */
 .card { border: 0; border-radius: var(--card-radius); box-shadow: var(--card-shadow); }
 .stat-strip { display: flex; flex-wrap: wrap; gap: 1.25rem 2.5rem; padding: 1.25rem 1.75rem; }
 .stat { display: flex; align-items: center; gap: 0.9rem; min-width: 160px; }
-.stat .tile { width: 48px; height: 48px; border-radius: 12px; display: grid; place-items: center; color: #fff; flex: none; }
+.stat .tile { width: 48px; height: 48px; border-radius: 8px; display: grid; place-items: center; color: #fff; flex: none; }
 .stat .num { font-size: 1.9rem; font-weight: 700; line-height: 1; }
 .stat .label { color: var(--muted); font-weight: 600; font-size: 0.9rem; margin-top: 2px; }
 .tile-navy { background: var(--navy); }
@@ -49,7 +49,7 @@ h2.section-title { font-size: 1.05rem; font-weight: 700; margin: 0 0 0.75rem; }
 .table-card a.name:hover { text-decoration: underline; }
 
 /* status badges, one shade each */
-.status { display: inline-block; padding: 0.3rem 0.7rem; border-radius: 999px; font-size: 0.8rem; font-weight: 700; color: #fff; }
+.status { display: inline-block; padding: 0.3rem 0.7rem; border-radius: 6px; font-size: 0.8rem; font-weight: 700; color: #fff; }
 .status-green { background: #2e9e5b; }
 .status-amber { background: #e8a317; }
 .status-red { background: #d6433b; }
@@ -57,13 +57,13 @@ h2.section-title { font-size: 1.05rem; font-weight: 700; margin: 0 0 0.75rem; }
 .tag { display: inline-block; padding: 0.2rem 0.6rem; border-radius: 6px; background: #fff3e6; color: #b85e00; font-size: 0.8rem; font-weight: 600; }
 
 /* buttons */
-.btn-navy { background: var(--navy); color: #fff; border: 0; border-radius: 999px; font-weight: 600; padding: 0.45rem 1.1rem; }
+.btn-navy { background: var(--navy); color: #fff; border: 0; border-radius: 8px; font-weight: 600; padding: 0.45rem 1.1rem; }
 .btn-navy:hover { background: var(--navy-dark); color: #fff; }
-.btn-outline-navy { color: var(--navy); border: 1.5px solid var(--navy); border-radius: 999px; font-weight: 600; background: #fff; padding: 0.4rem 1rem; }
+.btn-outline-navy { color: var(--navy); border: 1.5px solid var(--navy); border-radius: 8px; font-weight: 600; background: #fff; padding: 0.4rem 1rem; }
 .btn-outline-navy:hover { background: var(--navy); color: #fff; }
 
 /* timeline rows (student page) */
-.row-tile { width: 44px; height: 44px; border-radius: 10px; display: grid; place-items: center; color: #fff; flex: none; }
+.row-tile { width: 44px; height: 44px; border-radius: 8px; display: grid; place-items: center; color: #fff; flex: none; }
 .muted { color: var(--muted); }
 footer.site { color: var(--muted); font-size: 0.8rem; }
 
@@ -74,11 +74,11 @@ footer.site { color: var(--muted); font-size: 0.8rem; }
 .tl-title { font-weight: 600; }
 .tl-action { min-width: 110px; text-align: right; }
 .row-tile.small { width: 12px; height: 12px; border-radius: 4px; }
-.row-tile.tiny { width: 20px; height: 20px; border-radius: 6px; }
+.row-tile.tiny { width: 20px; height: 20px; border-radius: 5px; }
 .tile-grey { background: #c3c9d3; }
 
 /* name chips on the cohort page */
-.chip { display: inline-block; padding: 0.35rem 0.75rem; border-radius: 999px; font-size: 0.85rem; background: #fff; border: 1.5px solid #c3c9d3; color: var(--ink); }
+.chip { display: inline-block; padding: 0.35rem 0.75rem; border-radius: 6px; font-size: 0.85rem; background: #fff; border: 1.5px solid #c3c9d3; color: var(--ink); }
 .chip-green { border-color: #2e9e5b; } .chip-amber { border-color: #e8a317; } .chip-red { border-color: #d6433b; }
 .chip b { font-weight: 700; }
 .form-control, .form-control:focus { border-radius: 8px; border-color: #d9e0ea; }
