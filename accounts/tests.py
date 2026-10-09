@@ -23,3 +23,18 @@ class EnsureAdminTests(TestCase):
         with mock.patch.dict("os.environ", {"ADMIN_USERNAME": "", "ADMIN_PASSWORD": ""}):
             call_command("ensure_admin")
         self.assertFalse(User.objects.filter(is_superuser=True).exists())
+
+
+class SeedCohortTests(TestCase):
+    def test_builds_six_students_with_history_and_is_safe_to_rerun(self):
+        from django.core.management import call_command
+        from progress.models import Submission, Meeting
+        from risk.models import RiskScore
+        call_command("seed_deliverables")
+        call_command("seed_cohort", password="pw-for-test-only", days=5)
+        call_command("seed_cohort", password="pw-for-test-only", days=5)
+        self.assertEqual(User.objects.filter(role="student").count(), 6)
+        self.assertEqual(RiskScore.objects.filter(student__username="student1").count(), 6)
+        self.assertTrue(Submission.objects.filter(student__username="student1").exists())
+        self.assertTrue(Meeting.objects.filter(student__username="student4").exists())
+        self.assertFalse(RiskScore.objects.filter(student__username="student3", status="green").exists())

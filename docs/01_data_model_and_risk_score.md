@@ -102,5 +102,5 @@ question: test with fixed times, not the clock.
 
     .venv/bin/python manage.py test                 # runs the tests
     .venv/bin/python manage.py seed_deliverables    # loads the ten CLP deadlines
-    .venv/bin/python manage.py seed_demo            # creates sample accounts
+    .venv/bin/python manage.py seed_demo            # creates development accounts
     .venv/bin/python manage.py runserver            # starts the site at http://127.0.0.1:8000

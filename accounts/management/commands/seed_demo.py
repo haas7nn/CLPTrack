@@ -1,4 +1,4 @@
-"""Makes a few pretend accounts so we can try the site without real people.
+"""Makes a few development accounts so we can try the site locally.
 
 Run with:  python manage.py seed_demo
 Creates one coordinator, one supervisor and three students, all with the
@@ -21,7 +21,7 @@ ACCOUNTS = [
 
 
 class Command(BaseCommand):
-    help = "Create sample accounts for development"
+    help = "Create development accounts"
 
     def handle(self, *args, **options):
         supervisor = None
@@ -39,4 +39,4 @@ class Command(BaseCommand):
             if role == User.Role.SUPERVISOR:
                 supervisor = user
         User.objects.filter(role=User.Role.STUDENT, supervisor__isnull=True).update(supervisor=supervisor)
-        self.stdout.write(f"{len(ACCOUNTS)} sample accounts ready, password {DEV_PASSWORD}")
+        self.stdout.write(f"{len(ACCOUNTS)} development accounts ready, password {DEV_PASSWORD}")
