@@ -73,7 +73,9 @@ def summary_for(student, now, due_count):
     return {
         "user": student,
         "risk": RiskScore.objects.filter(student=student).first(),
-        "submitted": sum(1 for r in rows if r["status"] in ("done", "late")),
+        # submitted counts work for deliverables already due, early uploads are shown separately
+        "submitted": sum(1 for r in rows if r["status"] in ("done", "late") and r["deliverable"].due_at < now),
+        "early": sum(1 for r in rows if r["status"] in ("done", "late") and r["deliverable"].due_at >= now),
         "missing": sum(1 for r in rows if r["status"] == "missing"),
         "due_count": due_count,
         "last_meeting": student.meetings.order_by("-held_on").first(),
@@ -129,7 +131,7 @@ def export_csv(request):
     response["Content-Disposition"] = f'attachment; filename="clptrack_{now:%Y-%m-%d}.csv"'
     writer = csv.writer(response)
     writer.writerow(["Student ID", "Name", "Section", "Supervisor", "Score", "Status",
-                     "Submitted", "Missing", "Due so far", "Last meeting"])
+                     "Submitted", "Early", "Missing", "Due so far", "Last meeting"])
     for student in students.order_by("last_name", "first_name"):
         row = summary_for(student, now, due_count)
         writer.writerow([
@@ -140,6 +142,7 @@ def export_csv(request):
             row["risk"].score if row["risk"] else "",
             row["risk"].status if row["risk"] else "not scored",
             row["submitted"],
+            row["early"],
             row["missing"],
             due_count,
             row["last_meeting"].held_on if row["last_meeting"] else "none",

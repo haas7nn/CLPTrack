@@ -78,3 +78,22 @@ class ExportTests(TestCase):
     def test_student_cannot_download(self):
         self.client.login(username="stu", password="x")
         self.assertEqual(self.client.get(reverse("export_csv")).status_code, 403)
+
+
+class EarlyUploadTests(TestCase):
+    def test_early_upload_is_not_counted_against_due_work(self):
+        from datetime import timedelta
+        from django.utils import timezone
+        from progress.models import Deliverable, Submission
+        from dashboard.views import summary_for
+        sup = User.objects.create_user("sup", role="supervisor", password="x")
+        stu = User.objects.create_user("stu", role="student", password="x", supervisor=sup)
+        now = timezone.now()
+        due = Deliverable.objects.create(title="Past", order=1, due_at=now - timedelta(days=2))
+        later = Deliverable.objects.create(title="Future", order=2, due_at=now + timedelta(days=5))
+        Submission.objects.create(student=stu, deliverable=due, filename="a.pdf", data=b"x", submitted_at=now - timedelta(days=3))
+        Submission.objects.create(student=stu, deliverable=later, filename="b.pdf", data=b"x", submitted_at=now)
+        row = summary_for(stu, now, 1)
+        self.assertEqual(row["submitted"], 1)
+        self.assertEqual(row["early"], 1)
+        self.assertEqual(row["missing"], 0)
