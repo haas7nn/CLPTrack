@@ -44,6 +44,7 @@
         <td>{% if s.last_meeting %}{{ s.last_meeting.held_on|date:"j M" }}{% else %}<span class="muted">none</span>{% endif %}</td>
         <td class="pe-4">
           {% if s.risk %}<span class="status status-{{ s.risk.status }}">{{ s.risk.get_status_display }} {{ s.risk.score }}</span>
+          {% if s.trend is not None %}<span class="trend {% if s.trend > 0 %}up{% elif s.trend < 0 %}down{% endif %}" title="change over the last 7 days">{% if s.trend > 0 %}&#9650; {{ s.trend }}{% elif s.trend < 0 %}&#9660; {{ s.trend|cut:"-" }}{% else %}&#8212;{% endif %}</span>{% endif %}
           {% else %}<span class="status status-none">Not scored</span>{% endif %}
         </td>
       </tr>
@@ -54,6 +55,30 @@
   </table>
 </div>
 
+<div class="row g-4 mb-4">
+  <div class="col-lg-6">
+    <div class="card h-100"><div class="card-body p-4">
+      <h2 class="section-title">This week</h2>
+      {% for a in activity %}
+      <div class="d-flex justify-content-between gap-3 py-2 border-bottom-light">
+        <div><span class="fw-semibold">{{ a.student.get_full_name|default:a.student.username }}</span> <span class="muted">{{ a.text }}</span></div>
+        <div class="muted small text-nowrap">{{ a.when|date:"D j M" }}</div>
+      </div>
+      {% empty %}<div class="muted">Nothing recorded in the last seven days.</div>{% endfor %}
+    </div></div>
+  </div>
+  <div class="col-lg-6">
+    <div class="card h-100"><div class="card-body p-4">
+      <h2 class="section-title">Emails sent to you</h2>
+      {% for e in emails %}
+      <div class="d-flex justify-content-between gap-3 py-2 border-bottom-light">
+        <div><span class="tag me-1">{{ e.get_kind_display }}</span> {{ e.subject|cut:"CLPTrack alert: "|cut:"CLPTrack reminder: " }}</div>
+        <div class="muted small text-nowrap">{{ e.sent_at|date:"D j M" }}</div>
+      </div>
+      {% empty %}<div class="muted">No alerts yet. You get one when a student changes colour.</div>{% endfor %}
+    </div></div>
+  </div>
+</div>
 {% if students %}
 <div class="card"><div class="card-body p-4"><h2 class="section-title">Submitted so far, by student</h2><canvas id="progress" height="80"></canvas></div></div>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>

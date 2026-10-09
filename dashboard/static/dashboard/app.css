@@ -83,3 +83,9 @@ footer.site { color: var(--muted); font-size: 0.8rem; }
 .chip b { font-weight: 700; }
 .form-control, .form-control:focus { border-radius: 8px; border-color: #d9e0ea; }
 .form-control:focus { box-shadow: 0 0 0 3px rgba(15, 43, 89, 0.12); border-color: var(--navy); }
+
+.trend { font-size: 0.75rem; font-weight: 700; margin-left: 0.4rem; color: #8a94a6; }
+.trend.up { color: #d6433b; }    /* a rising score is worse */
+.trend.down { color: #2e9e5b; }  /* a falling score is better */
+.border-bottom-light { border-bottom: 1px solid #eef1f6; }
+.border-bottom-light:last-child { border-bottom: 0; }

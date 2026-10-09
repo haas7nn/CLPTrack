@@ -14,7 +14,10 @@ from django.core.exceptions import PermissionDenied
 from django.shortcuts import redirect, render
 from django.utils import timezone
 
-from progress.models import Deliverable, Submission
+from datetime import timedelta
+
+from notifications.models import NotificationLog
+from progress.models import Action, Deliverable, Meeting, Submission
 from risk.models import RiskScore
 
 
@@ -70,7 +73,7 @@ def student_home(request):
     if upcoming:
         next_row = dict(upcoming[0], days_left=(upcoming[0]["deliverable"].due_at - now).days)
     return render(request, "dashboard/student_home.html", {
-        "rows": rows, "risk": latest, "next_row": next_row,
+        "rows": rows, "risk": latest, "next_row": next_row, "steps": next_steps(request.user, rows, now),
         "submitted_count": sum(1 for r in rows if r["status"] in ("done", "late")),
         "missing_count": sum(1 for r in rows if r["status"] == "missing"),
     })
@@ -79,9 +82,13 @@ def student_home(request):
 def summary_for(student, now, due_count):
     """One line about a student: their score, how much is in, how much is missing, last meeting."""
     rows = timeline_for(student, now)
+    latest = RiskScore.objects.filter(student=student).first()
+    week_ago = RiskScore.objects.filter(student=student, scored_on__lte=now.date() - timedelta(days=7)).first()
+    trend = (latest.score - week_ago.score) if latest and week_ago else None
     return {
         "user": student,
-        "risk": RiskScore.objects.filter(student=student).first(),
+        "risk": latest,
+        "trend": trend,
         # submitted counts work for deliverables already due, early uploads are shown separately
         "submitted": sum(1 for r in rows if r["status"] in ("done", "late") and r["deliverable"].due_at < now),
         "early": sum(1 for r in rows if r["status"] in ("done", "late") and r["deliverable"].due_at >= now),
@@ -100,7 +107,45 @@ def supervisor_home(request):
     counts = {"green": 0, "amber": 0, "red": 0, "none": 0}
     for s in students:
         counts[s["risk"].status if s["risk"] else "none"] += 1
-    return render(request, "dashboard/supervisor_home.html", {"students": students, "counts": counts})
+    return render(request, "dashboard/supervisor_home.html", {
+        "students": students, "counts": counts,
+        "activity": recent_activity(request.user, now),
+        "emails": NotificationLog.objects.filter(recipient=request.user).order_by("-sent_at")[:8],
+    })
+
+
+def recent_activity(supervisor, now, days=7):
+    """What this supervisor's students did in the last week: uploads and meetings, newest first."""
+    since = now - timedelta(days=days)
+    items = []
+    for sub in Submission.objects.filter(student__supervisor=supervisor, submitted_at__gte=since).select_related("student", "deliverable"):
+        items.append({"when": sub.submitted_at, "student": sub.student, "text": f"uploaded {sub.deliverable.title}"})
+    for m in Meeting.objects.filter(student__supervisor=supervisor, created_at__gte=since).select_related("student"):
+        items.append({"when": m.created_at, "student": m.student, "text": f"recorded a meeting held on {m.held_on:%-d %B}"})
+    return sorted(items, key=lambda i: i["when"], reverse=True)[:10]
+
+
+def next_steps(student, rows, now):
+    """Plain words for the student: what would bring the score down, most urgent first."""
+    steps = []
+    for r in rows:
+        if r["status"] == "missing":
+            days = (now - r["deliverable"].due_at).days
+            steps.append((0, f"Upload {r['deliverable'].title}, it is {days} day{'s' if days != 1 else ''} overdue", r["deliverable"]))
+    last = Meeting.objects.filter(student=student).order_by("-held_on").first()
+    gap = (now.date() - last.held_on).days if last else None
+    if last is None:
+        steps.append((1, "Record your first meeting with your supervisor", None))
+    elif gap > 7:
+        steps.append((1, f"Record your latest meeting, the last one recorded was {gap} days ago", None))
+    open_actions = Action.objects.filter(meeting__student=student, done=False).count()
+    if open_actions:
+        steps.append((2, f"{open_actions} agreed action{'s are' if open_actions != 1 else ' is'} still open, tick them off when done", None))
+    for r in rows:
+        if r["status"] == "soon":
+            steps.append((3, f"{r['deliverable'].title} is due in {(r['deliverable'].due_at - now).days} days and nothing is uploaded yet", r["deliverable"]))
+            break
+    return [{"text": t, "deliverable": d} for _, t, d in sorted(steps, key=lambda x: x[0])]
 
 
 @role_required("coordinator")

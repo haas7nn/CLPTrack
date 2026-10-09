@@ -97,3 +97,24 @@ class EarlyUploadTests(TestCase):
         self.assertEqual(row["submitted"], 1)
         self.assertEqual(row["early"], 1)
         self.assertEqual(row["missing"], 0)
+
+
+class NextStepsTests(TestCase):
+    def test_student_gets_plain_advice_from_their_records(self):
+        from datetime import timedelta
+        from django.utils import timezone
+        from progress.models import Deliverable, Meeting, Action
+        from dashboard.views import next_steps, timeline_for
+        sup = User.objects.create_user("sup", role="supervisor", password="x")
+        stu = User.objects.create_user("stu", role="student", password="x", supervisor=sup)
+        now = timezone.now()
+        Deliverable.objects.create(title="Reflection 1", order=1, due_at=now - timedelta(days=3))
+        Deliverable.objects.create(title="Proposal", order=2, due_at=now + timedelta(days=4))
+        m = Meeting.objects.create(student=stu, held_on=(now - timedelta(days=12)).date(), discussed="x")
+        Action.objects.create(meeting=m, description="do it")
+        steps = [s["text"] for s in next_steps(stu, timeline_for(stu, now), now)]
+        self.assertIn("Upload Reflection 1, it is 3 days overdue", steps)
+        self.assertTrue(any("12 days ago" in t for t in steps))
+        self.assertTrue(any("1 agreed action is still open" in t for t in steps))
+        self.assertTrue(any("Proposal is due in" in t for t in steps))
+        self.assertEqual(steps[0], "Upload Reflection 1, it is 3 days overdue")

@@ -53,6 +53,15 @@
     </div>
   </div>
   <div class="col-lg-4">
+    <div class="card mb-4"><div class="card-body p-4">
+      <h2 class="section-title">What to do next</h2>
+      {% for st in steps %}
+      <div class="d-flex align-items-start gap-2 py-2 border-bottom-light">
+        <span class="row-tile tiny tile-orange mt-1"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M9 5l7 7-7 7"/></svg></span>
+        <div>{{ st.text }}{% if st.deliverable %} <a class="small ms-1" href="{% url 'submit' st.deliverable.id %}">upload</a>{% endif %}</div>
+      </div>
+      {% empty %}<div class="d-flex align-items-center gap-2"><span class="row-tile tiny tile-green"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M4 12.5l5 5L20 6.5"/></svg></span> You are up to date. Keep recording your weekly meetings.</div>{% endfor %}
+    </div></div>
     {% if risk %}{% include "risk/_breakdown.html" %}{% endif %}
   </div>
 </div>
