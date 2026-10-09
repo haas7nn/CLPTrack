@@ -1,0 +1,19 @@
+# Sends one test email from the live site, to check the mail settings after a change.
+# Run it by hand from the Actions tab and give the address to send to.
+name: test email
+on:
+  workflow_dispatch:
+    inputs:
+      to:
+        description: address to send the test email to
+        required: true
+jobs:
+  send:
+    runs-on: ubuntu-latest
+    steps:
+      - name: ask the site to send a test email
+        run: |
+          curl --fail --silent --show-error --max-time 120 \
+            -X POST -H "X-Task-Token: ${{ secrets.DAILY_TASK_TOKEN }}" \
+            --data-urlencode "to=${{ inputs.to }}" \
+            "${{ secrets.SITE_URL }}/tasks/test-email/"
