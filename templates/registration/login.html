@@ -7,7 +7,7 @@
       <div class="card-body p-4">
         <div class="d-flex align-items-center gap-3 mb-3">
           <div class="row-tile tile-navy"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="3.5" width="16" height="17" rx="2.5"/><path d="M8 9h8M8 13h8M8 17h5"/></svg></div>
-          <div><h1 class="page-title fs-5 mb-0">Sign in to CLPTrack</h1><div class="muted small">CLP supervision</div></div>
+          <div><h1 class="page-title fs-5 mb-0">Sign in to CLPTrack</h1></div>
         </div>
         {% if form.errors %}<div class="alert alert-danger">The username or password is not correct.</div>{% endif %}
         <form method="post">{% csrf_token %}

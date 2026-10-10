@@ -89,3 +89,20 @@ footer.site { color: var(--muted); font-size: 0.8rem; }
 .trend.down { color: #2e9e5b; }  /* a falling score is better */
 .border-bottom-light { border-bottom: 1px solid #eef1f6; }
 .border-bottom-light:last-child { border-bottom: 0; }
+
+/* small screens: tables scroll inside their card, the name in the header is hidden, stats stack tighter */
+.table-card { overflow-x: auto; }
+.table-card .table { min-width: 640px; }
+@media (max-width: 767px) {
+  .topbar .who { display: none; }
+  .topbar .nav-link { padding: 1.1rem 0.6rem; white-space: nowrap; }
+  .stat-strip { gap: 1rem 1.5rem; padding: 1rem 1.25rem; }
+  .stat { min-width: 130px; }
+  .stat .num { font-size: 1.6rem; }
+}
+.tl-action a.small { word-break: break-all; }
+@media (max-width: 575px) {
+  .tl-row { flex-wrap: wrap; gap: 0.6rem 0.9rem; padding: 0.9rem 1rem; }
+  .tl-row .flex-grow-1 { flex-basis: calc(100% - 44px - 0.9rem); }
+  .tl-action { min-width: 0; text-align: left; flex-basis: 100%; }
+}
