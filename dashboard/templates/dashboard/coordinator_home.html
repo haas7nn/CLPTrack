@@ -5,21 +5,48 @@
   <h1 class="page-title">The whole cohort</h1>
   <a class="btn btn-outline-navy btn-sm" href="{% url 'export_csv' %}">Download as spreadsheet</a>
 </div>
+
+<div class="card mb-4">
+  <div class="stat-strip">
+    <div class="stat">
+      <div class="tile tile-navy"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><circle cx="17" cy="9" r="2.5"/><path d="M15.5 14.5a5 5 0 0 1 6 5"/></svg></div>
+      <div><div class="num">{{ totals.students }}</div><div class="label">Students</div></div>
+    </div>
+    <div class="stat">
+      <div class="tile tile-grey"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg></div>
+      <div><div class="num">{{ totals.supervisors }}</div><div class="label">Supervisors</div></div>
+    </div>
+    <div class="stat">
+      <div class="tile tile-green"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M4 12.5l5 5L20 6.5"/></svg></div>
+      <div><div class="num">{{ totals.green }}</div><div class="label">On track</div></div>
+    </div>
+    <div class="stat">
+      <div class="tile tile-amber"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="9"/><path d="M12 7v6M12 16.5v.5"/></svg></div>
+      <div><div class="num">{{ totals.amber }}</div><div class="label">Needs attention</div></div>
+    </div>
+    <div class="stat">
+      <div class="tile tile-red"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 3l9.5 17h-19z"/><path d="M12 10v4M12 17.5v.5"/></svg></div>
+      <div><div class="num">{{ totals.red }}</div><div class="label">At risk</div></div>
+    </div>
+  </div>
+</div>
+
 {% for g in groups %}
 <div class="card mb-3"><div class="card-body p-4">
-  <div class="d-flex justify-content-between align-items-center mb-3">
-    <h2 class="section-title mb-0">{{ g.supervisor.get_full_name|default:g.supervisor.username }} <span class="muted fw-normal">{{ g.total }} students</span></h2>
-    <div class="d-flex gap-2">
+  <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+    <h2 class="section-title mb-0">{{ g.name }} <span class="muted fw-normal">{{ g.total }} student{{ g.total|pluralize }}</span></h2>
+    <div class="d-flex flex-wrap gap-2">
       <span class="status status-green">{{ g.counts.green }} on track</span>
-      <span class="status status-amber">{{ g.counts.amber }} attention</span>
+      <span class="status status-amber">{{ g.counts.amber }} needs attention</span>
       <span class="status status-red">{{ g.counts.red }} at risk</span>
+      {% if g.counts.none %}<span class="status status-none">{{ g.counts.none }} not scored</span>{% endif %}
     </div>
   </div>
   <div class="d-flex flex-wrap gap-2">
     {% for r in g.rows %}
-    <span class="chip chip-{% if r.risk %}{{ r.risk.status }}{% else %}none{% endif %}">{{ r.user.get_full_name|default:r.user.username }}{% if r.risk %} <b>{{ r.risk.score }}</b>{% endif %}</span>
+    <a class="chip chip-{% if r.risk %}{{ r.risk.status }}{% else %}none{% endif %}" href="{% url 'student_detail' r.user.id %}">{{ r.user.get_full_name|default:r.user.username }}{% if r.risk %} <b>{{ r.risk.score }}</b>{% endif %}</a>
     {% empty %}<span class="muted small">No students assigned.</span>{% endfor %}
   </div>
 </div></div>
-{% empty %}<p class="muted">No supervisors yet.</p>{% endfor %}
+{% empty %}<p class="muted">No supervisors yet. Add people in Admin.</p>{% endfor %}
 {% endblock %}

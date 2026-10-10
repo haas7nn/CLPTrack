@@ -1,0 +1,8 @@
+{% extends "admin/base.html" %}
+{# the back office stays light like the rest of the site and shows our name in the tab #}
+{% block title %}{% if subtitle %}{{ subtitle }} | {% endif %}{{ title }} | CLPTrack{% endblock %}
+{% block branding %}<div id="site-name"><a href="{% url 'admin:index' %}">{{ site_header }}</a></div>{% endblock %}
+{% block dark-mode-vars %}{% endblock %}
+{% block extrastyle %}{{ block.super }}
+<style>#header { background: #0f2b59; } #header a:link, #header a:visited, #site-name a { color: #fff; } .theme-toggle { display: none; }</style>
+{% endblock %}

@@ -25,6 +25,20 @@ class ProgressTests(TestCase):
         self.assertRedirects(response, reverse("student_home"))
         self.assertEqual(Submission.objects.filter(student=self.student).count(), 1)
 
+    def test_uploading_again_replaces_the_file_and_keeps_the_first_time(self):
+        first = SimpleUploadedFile("v1.pdf", b"%PDF-1.4 one", content_type="application/pdf")
+        self.client.post(reverse("submit", args=[self.deliverable.id]), {"file": first})
+        original = Submission.objects.get(student=self.student)
+        Submission.objects.filter(pk=original.pk).update(submitted_at=timezone.now() - timedelta(days=3))
+        second = SimpleUploadedFile("v2.pdf", b"%PDF-1.4 two", content_type="application/pdf")
+        response = self.client.post(reverse("submit", args=[self.deliverable.id]), {"file": second, "note": "fixed"})
+        self.assertRedirects(response, reverse("student_home"))
+        self.assertEqual(Submission.objects.filter(student=self.student).count(), 1)
+        replaced = Submission.objects.get(pk=original.pk)
+        self.assertEqual(replaced.filename, "v2.pdf")
+        self.assertEqual(bytes(replaced.data), b"%PDF-1.4 two")
+        self.assertLess(replaced.submitted_at, timezone.now() - timedelta(days=2))
+
     def test_wrong_file_type_is_refused(self):
         bad = SimpleUploadedFile("virus.exe", b"nope", content_type="application/octet-stream")
         response = self.client.post(reverse("submit", args=[self.deliverable.id]), {"file": bad})
@@ -59,6 +73,35 @@ class ProgressTests(TestCase):
         self.client.login(username="sup2", password="x")
         response = self.client.get(reverse("student_detail", args=[self.student.id]))
         self.assertEqual(response.status_code, 404)
+
+    def test_student_sees_the_feedback_on_their_timeline(self):
+        self.client.login(username="sup", password="x")
+        self.client.post(reverse("student_detail", args=[self.student.id]), {"text": "Tighten the aims"})
+        self.client.login(username="stu", password="x")
+        response = self.client.get(reverse("student_home"))
+        self.assertContains(response, "Tighten the aims")
+
+    def test_supervisor_sees_the_note_sent_with_an_upload(self):
+        pdf = SimpleUploadedFile("reflection.pdf", b"%PDF-1.4 test", content_type="application/pdf")
+        self.client.post(reverse("submit", args=[self.deliverable.id]), {"file": pdf, "note": "second attempt after your comments"})
+        self.client.login(username="sup", password="x")
+        response = self.client.get(reverse("student_detail", args=[self.student.id]))
+        self.assertContains(response, "second attempt after your comments")
+        self.assertContains(response, "reflection.pdf")
+
+    def test_coordinator_can_read_any_student_but_not_write_feedback(self):
+        User.objects.create_user("coord", role="coordinator", password="x")
+        self.client.login(username="coord", password="x")
+        response = self.client.get(reverse("student_detail", args=[self.student.id]))
+        self.assertContains(response, "Zahra Mahmood")
+        self.assertNotContains(response, "Leave feedback")
+        response = self.client.post(reverse("student_detail", args=[self.student.id]), {"text": "nope"})
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(self.student.feedback_received.count(), 0)
+
+    def test_student_cannot_open_the_detail_page(self):
+        response = self.client.get(reverse("student_detail", args=[self.student.id]))
+        self.assertEqual(response.status_code, 403)
 
     def test_daily_scoring_saves_one_row_per_student(self):
         call_command("score_students", verbosity=0)

@@ -74,6 +74,8 @@ def student_home(request):
         next_row = dict(upcoming[0], days_left=(upcoming[0]["deliverable"].due_at - now).days)
     return render(request, "dashboard/student_home.html", {
         "rows": rows, "risk": latest, "next_row": next_row, "steps": next_steps(request.user, rows, now),
+        "feedback": request.user.feedback_received.select_related("supervisor")[:5],
+        "emails": NotificationLog.objects.filter(recipient=request.user).order_by("-sent_at")[:5],
         "submitted_count": sum(1 for r in rows if r["status"] in ("done", "late")),
         "missing_count": sum(1 for r in rows if r["status"] == "missing"),
     })
@@ -150,19 +152,35 @@ def next_steps(student, rows, now):
 
 @role_required("coordinator")
 def coordinator_home(request):
-    """The coordinator sees every supervisor with their students and colours."""
+    """The coordinator sees every supervisor with their students and colours.
+
+    Students with no supervisor yet get their own group at the end, so nobody is lost.
+    """
     from accounts.models import User
+    totals = {"green": 0, "amber": 0, "red": 0, "none": 0, "students": 0}
     groups = []
-    for supervisor in User.objects.filter(role="supervisor").order_by("last_name", "first_name"):
-        students = supervisor.students.order_by("last_name", "first_name")
+
+    def group_for(name, students):
         counts = {"green": 0, "amber": 0, "red": 0, "none": 0}
         rows = []
         for student in students:
             risk = RiskScore.objects.filter(student=student).first()
-            counts[risk.status if risk else "none"] += 1
+            status = risk.status if risk else "none"
+            counts[status] += 1
+            totals[status] += 1
             rows.append({"user": student, "risk": risk})
-        groups.append({"supervisor": supervisor, "rows": rows, "counts": counts, "total": len(rows)})
-    return render(request, "dashboard/coordinator_home.html", {"groups": groups})
+        totals["students"] += len(rows)
+        return {"name": name, "rows": rows, "counts": counts, "total": len(rows)}
+
+    supervisors = list(User.objects.filter(role="supervisor").order_by("last_name", "first_name"))
+    for supervisor in supervisors:
+        groups.append(group_for(supervisor.get_full_name() or supervisor.username,
+                                supervisor.students.order_by("last_name", "first_name")))
+    unassigned = User.objects.filter(role="student", supervisor__isnull=True).order_by("last_name", "first_name")
+    if unassigned.exists():
+        groups.append(group_for("No supervisor yet", unassigned))
+    totals["supervisors"] = len(supervisors)
+    return render(request, "dashboard/coordinator_home.html", {"groups": groups, "totals": totals})
 
 
 @login_required

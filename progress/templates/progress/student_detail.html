@@ -1,13 +1,13 @@
 {% extends "base.html" %}
 {% block title %}{{ student.get_full_name }}, CLPTrack{% endblock %}
 {% block content %}
-<a class="small d-inline-block mb-2" href="{% url 'supervisor_home' %}">&larr; My students</a>
-<div class="card mb-4"><div class="card-body p-4 d-flex justify-content-between align-items-center">
+<a class="small d-inline-block mb-2" href="{% url back %}">&larr; {{ back_text }}</a>
+<div class="card mb-4"><div class="card-body p-4 d-flex justify-content-between align-items-center flex-wrap gap-2">
   <div>
     <h1 class="page-title">{{ student.get_full_name|default:student.username }}</h1>
-    <div class="muted">{{ student.student_id }} &middot; section {{ student.section }}</div>
+    <div class="muted">{{ student.student_id }} &middot; section {{ student.section }}{% if student.supervisor %} &middot; supervised by {{ student.supervisor.get_full_name|default:student.supervisor.username }}{% else %} &middot; <span class="text-danger">no supervisor yet</span>{% endif %}</div>
   </div>
-  {% if risk %}<span class="status status-{{ risk.status }} fs-6">{{ risk.get_status_display }}, score {{ risk.score }}</span>{% endif %}
+  {% if risk %}<span class="status status-{{ risk.status }} fs-6">{{ risk.get_status_display }}, score {{ risk.score }}</span>{% else %}<span class="status status-none fs-6">Not scored yet</span>{% endif %}
 </div></div>
 
 <div class="row g-4">
@@ -17,11 +17,15 @@
       {% for r in rows %}
       <div class="tl-row compact {% if forloop.last %}last{% endif %}">
         <div class="row-tile small tile-{% if r.status == 'done' %}green{% elif r.status == 'late' %}amber{% elif r.status == 'missing' %}red{% elif r.status == 'soon' %}orange{% else %}grey{% endif %}"></div>
-        <div class="flex-grow-1"><div class="tl-title">{{ r.deliverable.title }}</div><div class="muted small">{{ r.deliverable.due_at|date:"j M" }}</div></div>
+        <div class="flex-grow-1">
+          <div class="tl-title">{{ r.deliverable.order }}. {{ r.deliverable.title }}</div>
+          <div class="muted small">Due {{ r.deliverable.due_at|date:"j M" }}{% if r.submission %}, uploaded {{ r.submission.submitted_at|date:"j M" }}{% endif %}</div>
+          {% if r.submission.note %}<div class="small mt-1"><span class="tag me-1">Note</span>{{ r.submission.note }}</div>{% endif %}
+        </div>
         <span class="status status-{% if r.status == 'done' %}green{% elif r.status == 'late' or r.status == 'soon' %}amber{% elif r.status == 'missing' %}red{% else %}none{% endif %}">{{ r.label }}</span>
-        <div class="tl-action">{% if r.submission %}<a class="small" href="{% url 'download' r.submission.id %}">open</a>{% endif %}</div>
+        <div class="tl-action">{% if r.submission %}<a class="small" href="{% url 'download' r.submission.id %}">{{ r.submission.filename }}</a>{% endif %}</div>
       </div>
-      {% endfor %}
+      {% empty %}<div class="p-4 muted">No deliverables have been set up yet.</div>{% endfor %}
     </div>
     <h2 class="section-title">Meetings</h2>
     {% for m in meetings %}
@@ -30,19 +34,24 @@
       <div class="muted">{{ m.discussed|linebreaksbr }}</div>
       {% for a in m.actions.all %}<div class="small mt-1 {% if a.done %}muted text-decoration-line-through{% endif %}">&bull; {{ a.description }}</div>{% endfor %}
     </div></div>
-    {% empty %}<p class="muted">No meetings recorded.</p>{% endfor %}
+    {% empty %}<p class="muted">No meetings recorded yet.</p>{% endfor %}
   </div>
   <div class="col-lg-5">
     {% if risk %}{% include "risk/_breakdown.html" %}
     {% if chart.scores|length > 1 %}<div class="card mb-4"><div class="card-body p-4"><h2 class="section-title">Score over the semester</h2><canvas id="history" height="110"></canvas></div></div>{% endif %}
     {% endif %}
+    {% if form %}
     <div class="card mb-3"><div class="card-body p-4">
       <h2 class="section-title">Leave feedback</h2>
+      <p class="muted small">The student sees it on their timeline.</p>
       <form method="post">{% csrf_token %}{{ form.text }}<button class="btn btn-navy btn-sm mt-3">Save</button></form>
     </div></div>
+    {% else %}
+    <h2 class="section-title">Feedback from the supervisor</h2>
+    {% endif %}
     {% for f in feedback %}
-    <div class="card mb-2"><div class="card-body py-3"><div class="muted small">{{ f.created_at|date:"j M Y" }}</div>{{ f.text|linebreaksbr }}</div></div>
-    {% endfor %}
+    <div class="card mb-2"><div class="card-body py-3"><div class="muted small">{{ f.created_at|date:"j M Y" }}, {{ f.supervisor.get_full_name|default:f.supervisor.username }}</div>{{ f.text|linebreaksbr }}</div></div>
+    {% empty %}{% if not form %}<p class="muted">No feedback yet.</p>{% endif %}{% endfor %}
   </div>
 </div>
 <style>#id_text{width:100%;padding:.5rem .75rem;border:1px solid #d9e0ea;border-radius:8px}</style>

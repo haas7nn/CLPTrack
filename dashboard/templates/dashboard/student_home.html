@@ -46,6 +46,7 @@
         <span class="status status-{% if r.status == 'done' %}green{% elif r.status == 'late' or r.status == 'soon' %}amber{% elif r.status == 'missing' %}red{% else %}none{% endif %}">{{ r.label }}</span>
         <div class="tl-action">
           {% if r.submission %}<a class="small" href="{% url 'download' r.submission.id %}">{{ r.submission.filename }}</a>
+          <a class="small muted ms-2" href="{% url 'submit' r.deliverable.id %}">replace</a>
           {% else %}<a class="btn btn-outline-navy btn-sm" href="{% url 'submit' r.deliverable.id %}">Upload</a>{% endif %}
         </div>
       </div>
@@ -62,7 +63,27 @@
       </div>
       {% empty %}<div class="d-flex align-items-center gap-2"><span class="row-tile tiny tile-green"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M4 12.5l5 5L20 6.5"/></svg></span> You are up to date. Keep recording your weekly meetings.</div>{% endfor %}
     </div></div>
+    <div class="card mb-4"><div class="card-body p-4">
+      <h2 class="section-title">Feedback from your supervisor</h2>
+      {% for f in feedback %}
+      <div class="py-2 border-bottom-light">
+        <div class="muted small">{{ f.created_at|date:"j M Y" }}, {{ f.supervisor.get_full_name|default:f.supervisor.username }}</div>
+        {{ f.text|linebreaksbr }}
+      </div>
+      {% empty %}<div class="muted">Nothing yet. Your supervisor writes it from their view of your page.</div>{% endfor %}
+    </div></div>
     {% if risk %}{% include "risk/_breakdown.html" %}{% endif %}
+    {% if emails %}
+    <div class="card mb-4"><div class="card-body p-4">
+      <h2 class="section-title">Emails sent to you</h2>
+      {% for e in emails %}
+      <div class="d-flex justify-content-between gap-3 py-2 border-bottom-light">
+        <div class="small">{{ e.subject|cut:"CLPTrack reminder: "|cut:"CLPTrack alert: " }}</div>
+        <div class="muted small text-nowrap">{{ e.sent_at|date:"D j M" }}</div>
+      </div>
+      {% endfor %}
+    </div></div>
+    {% endif %}
   </div>
 </div>
 {% endblock %}

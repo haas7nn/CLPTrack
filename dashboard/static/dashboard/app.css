@@ -92,7 +92,7 @@ footer.site { color: var(--muted); font-size: 0.8rem; }
 
 /* small screens: tables scroll inside their card, the name in the header is hidden, stats stack tighter */
 .table-card { overflow-x: auto; }
-.table-card .table { min-width: 640px; }
+.table-card .table.wide { min-width: 640px; }
 @media (max-width: 767px) {
   .topbar .who { display: none; }
   .topbar .nav-link { padding: 1.1rem 0.6rem; white-space: nowrap; }

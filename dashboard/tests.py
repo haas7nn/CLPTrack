@@ -48,6 +48,14 @@ class CoordinatorTests(TestCase):
         self.client.login(username="stu9", password="x")
         self.assertEqual(self.client.get(reverse("coordinator_home")).status_code, 403)
 
+    def test_student_without_a_supervisor_is_still_listed(self):
+        User.objects.create_user("coord", role="coordinator", password="x")
+        User.objects.create_user("lost", role="student", password="x", first_name="Hind", last_name="Jaber")
+        self.client.login(username="coord", password="x")
+        response = self.client.get(reverse("coordinator_home"))
+        self.assertContains(response, "No supervisor yet")
+        self.assertContains(response, "Hind Jaber")
+
 
 class ExportTests(TestCase):
     def setUp(self):
