@@ -96,7 +96,7 @@ def summary_for(student, now, due_count):
         "early": sum(1 for r in rows if r["status"] in ("done", "late") and r["deliverable"].due_at >= now),
         "missing": sum(1 for r in rows if r["status"] == "missing"),
         "due_count": due_count,
-        "last_meeting": student.meetings.order_by("-held_on").first(),
+        "last_meeting": Meeting.counted().filter(student=student).order_by("-held_on").first(),
     }
 
 
@@ -111,6 +111,7 @@ def supervisor_home(request):
         counts[s["risk"].status if s["risk"] else "none"] += 1
     return render(request, "dashboard/supervisor_home.html", {
         "students": students, "counts": counts,
+        "to_confirm": Meeting.objects.filter(student__supervisor=request.user, status=Meeting.Status.WAITING).count(),
         "activity": recent_activity(request.user, now),
         "emails": NotificationLog.objects.filter(recipient=request.user).order_by("-sent_at")[:8],
     })
@@ -134,13 +135,15 @@ def next_steps(student, rows, now):
         if r["status"] == "missing":
             days = (now - r["deliverable"].due_at).days
             steps.append((0, f"Upload {r['deliverable'].title}, it is {days} day{'s' if days != 1 else ''} overdue", r["deliverable"]))
-    last = Meeting.objects.filter(student=student).order_by("-held_on").first()
+    for m in Meeting.objects.filter(student=student, status=Meeting.Status.REJECTED):
+        steps.append((0, f"Your supervisor marked the meeting of {m.held_on:%-d %B} as not held, record the real one", None))
+    last = Meeting.counted().filter(student=student).order_by("-held_on").first()
     gap = (now.date() - last.held_on).days if last else None
     if last is None:
         steps.append((1, "Record your first meeting with your supervisor", None))
     elif gap > 7:
         steps.append((1, f"Record your latest meeting, the last one recorded was {gap} days ago", None))
-    open_actions = Action.objects.filter(meeting__student=student, done=False).count()
+    open_actions = Action.objects.filter(meeting__student=student, done=False).exclude(meeting__status=Meeting.Status.REJECTED).count()
     if open_actions:
         steps.append((2, f"{open_actions} agreed action{'s are' if open_actions != 1 else ' is'} still open, tick them off when done", None))
     for r in rows:
@@ -228,7 +231,7 @@ def coordinator_home(request):
     from accounts.models import User
     now = timezone.now()
     due_count = Deliverable.objects.filter(due_at__lt=now).count()
-    totals = {"green": 0, "amber": 0, "red": 0, "none": 0, "students": 0, "missing": 0}
+    totals = {"green": 0, "amber": 0, "red": 0, "none": 0, "students": 0, "missing": 0, "waiting": 0}
     groups, everyone = [], []
 
     def group_for(name, students):
@@ -244,8 +247,10 @@ def coordinator_home(request):
         totals["students"] += len(rows)
         totals["missing"] += missing
         everyone.extend(rows)
+        waiting = Meeting.objects.filter(student__in=[row["user"] for row in rows], status=Meeting.Status.WAITING).count()
+        totals["waiting"] += waiting
         return {
-            "name": name, "rows": rows, "counts": counts, "total": len(rows), "missing": missing,
+            "name": name, "rows": rows, "counts": counts, "total": len(rows), "missing": missing, "waiting": waiting,
             "average": round(sum(scores) / len(scores)) if scores else None,
             "no_meeting": sum(1 for row in rows if row["last_meeting"] is None
                               or (now.date() - row["last_meeting"].held_on).days > 14),

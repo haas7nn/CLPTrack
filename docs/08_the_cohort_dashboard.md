@@ -53,5 +53,5 @@ coordinator can act on.
 
 ## Tests
 
-48 tests in total after the shared password command was added. Four new ones here build two students with known records and check the deliverable counts, the
+Four tests cover this page. They build two students with known records and check the deliverable counts, the
 attention list and its reason, the meeting groups and the supervisor line, and the colour history.

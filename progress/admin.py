@@ -25,7 +25,8 @@ class ActionInline(admin.TabularInline):
 
 @admin.register(Meeting)
 class MeetingAdmin(admin.ModelAdmin):
-    list_display = ("student", "held_on")
+    list_display = ("student", "held_on", "status")
+    list_filter = ("status",)
     inlines = [ActionInline]
 
 

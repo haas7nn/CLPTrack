@@ -107,6 +107,11 @@ class CohortStatisticsTests(TestCase):
         self.assertEqual((group["average"], group["missing"], group["no_meeting"]), (34, 1, 1))
         self.assertEqual(self.response.context["totals"]["missing"], 1)
 
+    def test_meetings_waiting_for_confirmation_are_counted(self):
+        self.assertEqual(self.response.context["totals"]["waiting"], 1)
+        self.assertEqual(self.response.context["groups"][0]["waiting"], 1)
+        self.assertContains(self.response, "Meetings waiting for confirmation")
+
     def test_colour_history_counts_each_day(self):
         history = self.response.context["history"]
         self.assertEqual(len(history["labels"]), 2)

@@ -141,3 +141,63 @@ class DownloadTests(TestCase):
         saved = Submission.objects.get(filename="draft.pdf")
         self.assertEqual(bytes(saved.data), b"%PDF-1.4 draft")
         self.assertEqual(saved.size, len(b"%PDF-1.4 draft"))
+
+
+class MeetingConfirmationTests(TestCase):
+    """The student records a meeting, the supervisor says if it happened."""
+
+    def setUp(self):
+        self.supervisor = User.objects.create_user("sup", role="supervisor", password="x")
+        self.student = User.objects.create_user("stu", role="student", password="x", supervisor=self.supervisor,
+                                                first_name="Zahra", last_name="Mahmood")
+        self.today = timezone.localdate()
+        self.meeting = Meeting.objects.create(student=self.student, held_on=self.today, discussed="Scope")
+
+    def test_a_new_meeting_waits_for_confirmation(self):
+        self.assertEqual(self.meeting.status, "waiting")
+        self.client.login(username="stu", password="x")
+        self.assertContains(self.client.get(reverse("meetings")), "Waiting for confirmation")
+
+    def test_supervisor_confirms_a_meeting(self):
+        self.client.login(username="sup", password="x")
+        response = self.client.post(reverse("meeting_review", args=[self.meeting.id]), {"decision": "confirmed"})
+        self.assertRedirects(response, reverse("student_detail", args=[self.student.id]))
+        self.meeting.refresh_from_db()
+        self.assertEqual(self.meeting.status, "confirmed")
+        self.assertIsNotNone(self.meeting.reviewed_at)
+
+    def test_only_the_students_own_supervisor_can_review(self):
+        User.objects.create_user("sup2", role="supervisor", password="x")
+        self.client.login(username="sup2", password="x")
+        response = self.client.post(reverse("meeting_review", args=[self.meeting.id]), {"decision": "rejected"})
+        self.assertEqual(response.status_code, 404)
+        self.client.login(username="stu", password="x")   # a student cannot confirm their own meeting
+        response = self.client.post(reverse("meeting_review", args=[self.meeting.id]), {"decision": "confirmed"})
+        self.assertEqual(response.status_code, 403)
+        self.meeting.refresh_from_db()
+        self.assertEqual(self.meeting.status, "waiting")
+
+    def test_a_rejected_meeting_stops_counting_towards_the_score(self):
+        from datetime import datetime, time
+        from risk import scoring
+        now = timezone.make_aware(datetime.combine(self.today, time(12, 0)))
+        self.assertEqual(scoring.supervision_indicator(self.student, self.today), 0.0)   # met today, all fine
+        Action.objects.create(meeting=self.meeting, description="Send the draft")
+        self.assertEqual(scoring.actions_indicator(self.student), 1.0)
+        self.client.login(username="sup", password="x")
+        self.client.post(reverse("meeting_review", args=[self.meeting.id]), {"decision": "rejected"})
+        self.assertGreater(scoring.supervision_indicator(self.student, self.today), 0.0)  # back to no meeting at all
+        self.assertEqual(scoring.actions_indicator(self.student), 0.0)                   # its actions are dropped too
+        self.assertIn("supervision", scoring.compute(self.student, now)["breakdown"])
+
+    def test_student_is_told_when_a_meeting_was_rejected(self):
+        self.client.login(username="sup", password="x")
+        self.client.post(reverse("meeting_review", args=[self.meeting.id]), {"decision": "rejected"})
+        self.client.login(username="stu", password="x")
+        self.assertContains(self.client.get(reverse("meetings")), "marked this meeting as not held")
+        self.assertContains(self.client.get(reverse("student_home")), "as not held, record the real one")
+
+    def test_an_unknown_decision_is_refused(self):
+        self.client.login(username="sup", password="x")
+        response = self.client.post(reverse("meeting_review", args=[self.meeting.id]), {"decision": "deleted"})
+        self.assertEqual(response.status_code, 403)

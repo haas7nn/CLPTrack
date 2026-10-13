@@ -28,6 +28,10 @@
       <div class="tile tile-orange"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3.5" y="5" width="17" height="15" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg></div>
       <div><div class="num">{{ students.0.due_count|default:0 }}</div><div class="label">Deliverables due so far</div></div>
     </div>
+    <div class="stat">
+      <div class="tile tile-grey"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16v10H9l-5 4z"/></svg></div>
+      <div><div class="num">{{ to_confirm }}</div><div class="label">Meetings to confirm</div></div>
+    </div>
   </div>
 </div>
 

@@ -10,7 +10,7 @@ from django.views.decorators.http import require_POST
 from accounts.models import User
 from dashboard.views import role_required, timeline_for
 from .forms import FeedbackForm, MeetingForm, SubmissionForm
-from .models import Action, Deliverable, Submission
+from .models import Action, Deliverable, Meeting, Submission
 
 
 @role_required("student")
@@ -104,6 +104,26 @@ def student_detail(request, student_id):
         # the chart needs plain lists, one of dates and one of scores
         "chart": {"labels": [h["scored_on"].strftime("%d %b") for h in history], "scores": [h["score"] for h in history]},
     })
+
+
+@role_required("supervisor")
+@require_POST
+def meeting_review(request, meeting_id):
+    """A supervisor says whether a meeting their student recorded really happened.
+
+    Only the student's own supervisor can do it. A meeting marked as not held stops counting
+    towards the score from the next daily run.
+    """
+    meeting = get_object_or_404(Meeting, pk=meeting_id, student__supervisor=request.user)
+    decision = request.POST.get("decision")
+    if decision not in (Meeting.Status.CONFIRMED, Meeting.Status.REJECTED):
+        raise PermissionDenied
+    meeting.status = decision
+    meeting.reviewed_at = timezone.now()
+    meeting.save()
+    messages.success(request, "Meeting confirmed." if decision == Meeting.Status.CONFIRMED
+                     else "Meeting marked as not held. It no longer counts towards the score.")
+    return redirect("student_detail", student_id=meeting.student_id)
 
 
 @login_required

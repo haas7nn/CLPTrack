@@ -69,7 +69,8 @@ def lateness_indicator(student):
 
 def supervision_indicator(student, today):
     """How long since the last meeting, beyond the one week that is allowed."""
-    last = Meeting.objects.filter(student=student).order_by("-held_on").first()
+    # a meeting the supervisor marked as not held does not count
+    last = Meeting.counted().filter(student=student).order_by("-held_on").first()
     since = last.held_on if last else semester_start()
     gap = (today - since).days
     return clamp((gap - MEETING_RULE_DAYS) / SUPERVISION_CAP_DAYS)
@@ -90,7 +91,7 @@ def proximity_indicator(student, now):
 
 def actions_indicator(student):
     """What share of the things agreed in meetings are still not done."""
-    actions = Action.objects.filter(meeting__student=student)
+    actions = Action.objects.filter(meeting__student=student).exclude(meeting__status=Meeting.Status.REJECTED)
     total = actions.count()
     if total == 0:
         return 0.0

@@ -55,18 +55,31 @@ class Submission(models.Model):
 
 
 class Meeting(models.Model):
-    """One meeting with the supervisor, written down by the student."""
+    """One meeting with the supervisor, written down by the student and then checked by the supervisor."""
+
+    class Status(models.TextChoices):
+        WAITING = "waiting", "Waiting for confirmation"
+        CONFIRMED = "confirmed", "Confirmed by supervisor"
+        REJECTED = "rejected", "Marked as not held"
 
     student = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="meetings")
     held_on = models.DateField()
     discussed = models.TextField(help_text="What was discussed")
     created_at = models.DateTimeField(auto_now_add=True)
+    # the student records the meeting, the supervisor says if it really happened
+    status = models.CharField(max_length=10, choices=Status.choices, default=Status.WAITING)
+    reviewed_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         ordering = ["-held_on"]
 
     def __str__(self):
         return f"Meeting of {self.student} on {self.held_on}"
+
+    @classmethod
+    def counted(cls):
+        """The meetings that count: everything except the ones a supervisor marked as not held."""
+        return cls.objects.exclude(status=cls.Status.REJECTED)
 
 
 class Action(models.Model):

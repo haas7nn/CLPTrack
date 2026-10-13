@@ -90,14 +90,15 @@
       <div class="d-flex justify-content-between py-2 border-bottom-light"><span>One to two weeks ago</span><b>{{ meetings.fortnight }}</b></div>
       <div class="d-flex justify-content-between py-2 border-bottom-light"><span>More than two weeks ago</span><b class="{% if meetings.older %}text-danger{% endif %}">{{ meetings.older }}</b></div>
       <div class="d-flex justify-content-between py-2 border-bottom-light"><span>No meeting recorded</span><b class="{% if meetings.never %}text-danger{% endif %}">{{ meetings.never }}</b></div>
-      <div class="muted small mt-3">The course asks for a meeting every week.</div>
+      <div class="d-flex justify-content-between py-2 border-bottom-light"><span>Meetings waiting for confirmation</span><b>{{ totals.waiting }}</b></div>
+      <div class="muted small mt-3">The course asks for a meeting every week. A meeting a supervisor marked as not held is not counted.</div>
     </div></div>
   </div>
   <div class="col-lg-8">
     <div class="card table-card h-100">
       <div class="p-4 pb-2"><h2 class="section-title mb-0">By supervisor</h2></div>
       <table class="table">
-        <thead><tr><th class="ps-4">Supervisor</th><th>Students</th><th>Colours</th><th>Average score</th><th>Missing</th><th class="pe-4">No meeting in two weeks</th></tr></thead>
+        <thead><tr><th class="ps-4">Supervisor</th><th>Students</th><th>Colours</th><th>Average score</th><th>Missing</th><th>No meeting in two weeks</th><th class="pe-4">To confirm</th></tr></thead>
         <tbody>
         {% for g in groups %}
           <tr>
@@ -106,9 +107,10 @@
             <td class="text-nowrap"><span class="dot dot-green"></span>{{ g.counts.green }} <span class="dot dot-amber ms-2"></span>{{ g.counts.amber }} <span class="dot dot-red ms-2"></span>{{ g.counts.red }}</td>
             <td>{% if g.average is not None %}{{ g.average }}{% else %}<span class="muted small">not scored</span>{% endif %}</td>
             <td>{% if g.missing %}<span class="text-danger fw-semibold">{{ g.missing }}</span>{% else %}0{% endif %}</td>
-            <td class="pe-4">{% if g.no_meeting %}<span class="text-danger fw-semibold">{{ g.no_meeting }}</span>{% else %}0{% endif %}</td>
+            <td>{% if g.no_meeting %}<span class="text-danger fw-semibold">{{ g.no_meeting }}</span>{% else %}0{% endif %}</td>
+            <td class="pe-4">{{ g.waiting }}</td>
           </tr>
-        {% empty %}<tr><td colspan="6" class="muted ps-4">No supervisors yet. Add people in Admin.</td></tr>{% endfor %}
+        {% empty %}<tr><td colspan="7" class="muted ps-4">No supervisors yet. Add people in Admin.</td></tr>{% endfor %}
         </tbody>
       </table>
     </div>

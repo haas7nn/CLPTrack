@@ -113,3 +113,9 @@ footer.site { color: var(--muted); font-size: 0.8rem; }
 .dot { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 0.3rem; }
 .dot-green { background: #2e9e5b; } .dot-amber { background: #e8a317; } .dot-red { background: #d6433b; }
 h3.section-title { font-size: 1.05rem; font-weight: 700; margin: 0 0 0.75rem; }
+
+/* whether a recorded meeting was checked by the supervisor */
+.check { display: inline-block; padding: 0.15rem 0.55rem; border-radius: 6px; font-size: 0.75rem; font-weight: 600; white-space: nowrap; }
+.check-waiting { background: #eef1f6; color: #4c5a73; }
+.check-confirmed { background: #e3f4ea; color: #1f7a45; }
+.check-rejected { background: #fbe6e4; color: #b3312a; }
