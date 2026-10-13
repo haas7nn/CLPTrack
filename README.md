@@ -7,7 +7,20 @@ Student: Hasan Fardan, 202301686. Supervisor: Dr Elsayed Elkenawy.
 ## What it does
 
 Students see their CLP deadlines, upload their work and record their supervision meetings.
-Supervisors see all their students on one dashboard with a green, amber or red risk status for each one.
+Supervisors see all their students on one dashboard with a green, amber or red risk status for each one,
+with the reasons behind it, confirm the meetings their students record, and leave feedback.
+The coordinator sees the whole cohort with statistics, changes the score weights with a preview of the
+effect, and loads accounts from a csv file.
+
+| Who | Pages |
+|---|---|
+| Student | Timeline, upload and replace a file, meetings and actions, what to do next, feedback, printable report |
+| Supervisor | My students, one student in full, confirm meetings, feedback, printable report, spreadsheet |
+| Coordinator | Cohort dashboard, any student read only, Add people, Score settings, Admin, spreadsheet |
+| Everyone | Change password, reset a forgotten password by email |
+
+Every morning a job scores every student from five indicators, emails students before deadlines and
+emails a supervisor when a student changes colour.
 
 ## Run it
 
@@ -22,15 +35,21 @@ Then open http://127.0.0.1:8000
 
     .venv/bin/python manage.py seed_deliverables   # the CLP deadlines for this semester
     .venv/bin/python manage.py seed_demo           # development accounts
-.venv/bin/python manage.py seed_cohort --password x   # six students with three weeks of history
+    .venv/bin/python manage.py seed_cohort --password choose-one   # six students with three weeks of history
+    .venv/bin/python manage.py shared_password     # asks for one password and sets it on all eight accounts
 
-Development accounts, development only: coordinator (also the admin), supervisor1, student1, student2, student3.
-The password for all of them is in accounts/management/commands/seed_demo.py.
+Development accounts, development only: coordinator (also the admin), supervisor1, student1 to student6.
+`seed_demo` gives the first five a starting password written in that command. Run `shared_password` to
+replace it with your own. On the host the same command reads `ACCOUNTS_PASSWORD`.
 The admin site is at http://127.0.0.1:8000/admin
 
 ## Tests
 
     .venv/bin/python manage.py test
+
+72 tests, about forty seconds. They cover each indicator and the worked example, the access rule of
+every page, uploads, meetings and their confirmation, emails never sent twice, the cohort statistics,
+score settings, passwords, loading people from a file and the printable report.
 
 ## Putting it online
 
@@ -44,7 +63,7 @@ which posts to `/tasks/daily/` with the secret token every morning. Two reposito
 
 ## Walkthroughs
 
-The `docs/` folder has six plain English notes, one per part of the system, each ending with the
+The `docs/` folder has ten plain English notes, one per part of the system, each ending with the
 questions an examiner might ask. Read them in order.
 
 ## Workflows
