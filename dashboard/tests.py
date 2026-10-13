@@ -57,6 +57,62 @@ class CoordinatorTests(TestCase):
         self.assertContains(response, "Hind Jaber")
 
 
+class CohortStatisticsTests(TestCase):
+    """The numbers on the coordinator page, checked against records we create here."""
+
+    def setUp(self):
+        from datetime import timedelta
+        from django.utils import timezone
+        from progress.models import Deliverable, Meeting, Submission
+        from risk.models import RiskScore
+        self.now = timezone.now()
+        User.objects.create_user("coord", role="coordinator", password="x")
+        sup = User.objects.create_user("supa", role="supervisor", password="x", first_name="Adeeb", last_name="Sulaiman")
+        self.good = User.objects.create_user("good", role="student", password="x", supervisor=sup, first_name="Mona", last_name="Khalil")
+        self.behind = User.objects.create_user("behind", role="student", password="x", supervisor=sup, first_name="Faris", last_name="Nasser")
+        self.past = Deliverable.objects.create(title="Reflection 1", order=1, due_at=self.now - timedelta(days=5))
+        self.future = Deliverable.objects.create(title="Reflection 2", order=2, due_at=self.now + timedelta(days=9))
+        # Mona handed in one day late and met her supervisor this week, Faris did neither
+        Submission.objects.create(student=self.good, deliverable=self.past, filename="r1.pdf",
+                                  submitted_at=self.now - timedelta(days=3, hours=12))
+        Meeting.objects.create(student=self.good, held_on=self.now.date() - timedelta(days=2), discussed="x")
+        today = self.now.date()
+        RiskScore.objects.create(student=self.good, scored_on=today, score=6, status="green",
+                                 breakdown={"overdue": {"value": 0, "weight": 35, "points": 0.0},
+                                            "lateness": {"value": 0.14, "weight": 20, "points": 2.9}})
+        RiskScore.objects.create(student=self.behind, scored_on=today, score=62, status="red",
+                                 breakdown={"overdue": {"value": 1, "weight": 35, "points": 35.0},
+                                            "supervision": {"value": 1, "weight": 25, "points": 25.0}})
+        RiskScore.objects.create(student=self.behind, scored_on=today - timedelta(days=1), score=40, status="amber", breakdown={})
+        self.client.login(username="coord", password="x")
+        self.response = self.client.get(reverse("coordinator_home"))
+
+    def test_deliverable_counts_handed_in_late_and_missing(self):
+        rows = {r["deliverable"].title: r for r in self.response.context["deliverables"]}
+        past = rows["Reflection 1"]
+        self.assertEqual((past["submitted"], past["late"], past["missing"], past["percent"]), (1, 1, 1, 50))
+        future = rows["Reflection 2"]
+        self.assertFalse(future["due"])
+        self.assertEqual(future["missing"], 0)  # not due yet, so nobody is missing it
+
+    def test_attention_list_is_worst_first_with_the_main_reason(self):
+        attention = self.response.context["attention"]
+        self.assertEqual([a["user"].username for a in attention], ["behind"])
+        self.assertEqual(attention[0]["reason"], "work overdue")
+        self.assertContains(self.response, "Main reason: work overdue")
+
+    def test_meeting_groups_and_supervisor_line(self):
+        self.assertEqual(self.response.context["meetings"], {"week": 1, "fortnight": 0, "older": 0, "never": 1})
+        group = self.response.context["groups"][0]
+        self.assertEqual((group["average"], group["missing"], group["no_meeting"]), (34, 1, 1))
+        self.assertEqual(self.response.context["totals"]["missing"], 1)
+
+    def test_colour_history_counts_each_day(self):
+        history = self.response.context["history"]
+        self.assertEqual(len(history["labels"]), 2)
+        self.assertEqual((history["green"], history["amber"], history["red"]), ([0, 1], [1, 0], [0, 1]))
+
+
 class ExportTests(TestCase):
     def setUp(self):
         self.supervisor = User.objects.create_user("sup", role="supervisor", password="x")

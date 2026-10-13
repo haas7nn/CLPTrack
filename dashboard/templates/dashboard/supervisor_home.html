@@ -44,7 +44,7 @@
         <td>{% if s.last_meeting %}{{ s.last_meeting.held_on|date:"j M" }}{% else %}<span class="muted">none</span>{% endif %}</td>
         <td class="pe-4">
           {% if s.risk %}<span class="status status-{{ s.risk.status }}">{{ s.risk.get_status_display }} {{ s.risk.score }}</span>
-          {% if s.trend is not None %}<span class="trend {% if s.trend > 0 %}up{% elif s.trend < 0 %}down{% endif %}" title="change over the last 7 days">{% if s.trend > 0 %}&#9650; {{ s.trend }}{% elif s.trend < 0 %}&#9660; {{ s.trend|cut:"-" }}{% else %}&#8212;{% endif %}</span>{% endif %}
+          {% if s.trend is not None %}<span class="trend {% if s.trend > 0 %}up{% elif s.trend < 0 %}down{% endif %}" title="change over the last 7 days">{% if s.trend > 0 %}&#9650; {{ s.trend }}{% elif s.trend < 0 %}&#9660; {{ s.trend|cut:"-" }}{% else %}0{% endif %}</span>{% endif %}
           {% else %}<span class="status status-none">Not scored</span>{% endif %}
         </td>
       </tr>

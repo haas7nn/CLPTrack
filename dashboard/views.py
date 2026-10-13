@@ -150,27 +150,106 @@ def next_steps(student, rows, now):
     return [{"text": t, "deliverable": d} for _, t, d in sorted(steps, key=lambda x: x[0])]
 
 
+# plain words for each indicator, used when we say why a student is amber or red
+INDICATOR_WORDS = {
+    "overdue": "work overdue",
+    "lateness": "work handed in late",
+    "supervision": "no recent meeting",
+    "proximity": "deadline close, nothing uploaded",
+    "actions": "agreed actions still open",
+}
+
+
+def main_reason(risk):
+    """The indicator that added the most points to a score, in plain words."""
+    if not risk or not risk.breakdown:
+        return ""
+    name, part = max(risk.breakdown.items(), key=lambda item: item[1]["points"])
+    return INDICATOR_WORDS.get(name, name) if part["points"] > 0 else ""
+
+
+def deliverable_stats(students, now):
+    """For every deliverable: how many students handed it in, how many were late, how many are missing."""
+    total = len(students)
+    rows = []
+    for d in Deliverable.objects.all():
+        # one student counts once, even if an old record holds two files for the same deliverable
+        first = {}
+        for sub in Submission.objects.filter(deliverable=d, student__in=students).order_by("submitted_at"):
+            first.setdefault(sub.student_id, sub)
+        submitted = len(first)
+        due = d.due_at < now
+        rows.append({
+            "deliverable": d, "due": due, "submitted": submitted,
+            "late": sum(1 for sub in first.values() if sub.days_late() > 0),
+            "missing": total - submitted if due else 0,
+            "percent": round(100 * submitted / total) if total else 0,
+            "days_left": (d.due_at - now).days,
+        })
+    return rows
+
+
+def meeting_stats(summaries, today):
+    """How recently each student met their supervisor, counted into four groups."""
+    groups = {"week": 0, "fortnight": 0, "older": 0, "never": 0}
+    for s in summaries:
+        last = s["last_meeting"]
+        if last is None:
+            groups["never"] += 1
+            continue
+        gap = (today - last.held_on).days
+        groups["week" if gap <= 7 else "fortnight" if gap <= 14 else "older"] += 1
+    return groups
+
+
+def colour_history():
+    """How many students were green, amber and red on each day that was scored, for the chart."""
+    from django.db.models import Count
+    days = {}
+    for row in RiskScore.objects.values("scored_on", "status").annotate(n=Count("id")).order_by("scored_on"):
+        days.setdefault(row["scored_on"], {"green": 0, "amber": 0, "red": 0})[row["status"]] = row["n"]
+    return {
+        "labels": [day.strftime("%d %b") for day in days],
+        "green": [c["green"] for c in days.values()],
+        "amber": [c["amber"] for c in days.values()],
+        "red": [c["red"] for c in days.values()],
+    }
+
+
 @role_required("coordinator")
 def coordinator_home(request):
-    """The coordinator sees every supervisor with their students and colours.
+    """The coordinator's view of the whole cohort.
 
-    Students with no supervisor yet get their own group at the end, so nobody is lost.
+    The top half is statistics: the colours today and over time, who needs attention and why, how each
+    deliverable went, how recently students met their supervisors, and one line per supervisor.
+    The bottom half lists every student under their supervisor. Students with no supervisor yet get
+    their own group at the end, so nobody is lost.
     """
     from accounts.models import User
-    totals = {"green": 0, "amber": 0, "red": 0, "none": 0, "students": 0}
-    groups = []
+    now = timezone.now()
+    due_count = Deliverable.objects.filter(due_at__lt=now).count()
+    totals = {"green": 0, "amber": 0, "red": 0, "none": 0, "students": 0, "missing": 0}
+    groups, everyone = [], []
 
     def group_for(name, students):
         counts = {"green": 0, "amber": 0, "red": 0, "none": 0}
-        rows = []
-        for student in students:
-            risk = RiskScore.objects.filter(student=student).first()
-            status = risk.status if risk else "none"
+        rows = [summary_for(student, now, due_count) for student in students]
+        for row in rows:
+            row["supervisor_name"] = name
+            status = row["risk"].status if row["risk"] else "none"
             counts[status] += 1
             totals[status] += 1
-            rows.append({"user": student, "risk": risk})
+        scores = [row["risk"].score for row in rows if row["risk"]]
+        missing = sum(row["missing"] for row in rows)
         totals["students"] += len(rows)
-        return {"name": name, "rows": rows, "counts": counts, "total": len(rows)}
+        totals["missing"] += missing
+        everyone.extend(rows)
+        return {
+            "name": name, "rows": rows, "counts": counts, "total": len(rows), "missing": missing,
+            "average": round(sum(scores) / len(scores)) if scores else None,
+            "no_meeting": sum(1 for row in rows if row["last_meeting"] is None
+                              or (now.date() - row["last_meeting"].held_on).days > 14),
+        }
 
     supervisors = list(User.objects.filter(role="supervisor").order_by("last_name", "first_name"))
     for supervisor in supervisors:
@@ -180,7 +259,19 @@ def coordinator_home(request):
     if unassigned.exists():
         groups.append(group_for("No supervisor yet", unassigned))
     totals["supervisors"] = len(supervisors)
-    return render(request, "dashboard/coordinator_home.html", {"groups": groups, "totals": totals})
+
+    # amber and red students, worst first, each with the main reason for their score
+    attention = sorted((row for row in everyone if row["risk"] and row["risk"].status != "green"),
+                       key=lambda row: -row["risk"].score)
+    for row in attention:
+        row["reason"] = main_reason(row["risk"])
+
+    return render(request, "dashboard/coordinator_home.html", {
+        "groups": groups, "totals": totals, "attention": attention,
+        "deliverables": deliverable_stats([row["user"] for row in everyone], now),
+        "meetings": meeting_stats(everyone, now.date()),
+        "history": colour_history(),
+    })
 
 
 @login_required
