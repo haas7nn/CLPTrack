@@ -1,0 +1,17 @@
+{# the milestone bar: one block per deliverable in order, coloured by where the student stands on it #}
+<div class="milestone-wrap">
+  <div class="d-flex justify-content-between align-items-baseline mb-2">
+    <div class="fw-semibold">Progress through the deliverables</div>
+    <div class="muted small">{{ progress.done }} of {{ progress.total }} handed in, {{ progress.percent }}%</div>
+  </div>
+  <div class="milestones" role="img" aria-label="{{ progress.done }} of {{ progress.total }} deliverables handed in">
+    {% for r in rows %}<span class="ms ms-{{ r.status }}" title="{{ r.deliverable.order }}. {{ r.deliverable.title }}: {{ r.label }}"><i>{{ r.deliverable.order }}</i></span>{% endfor %}
+  </div>
+  <div class="milestone-key muted small mt-2">
+    <span><b class="ms ms-done"></b> handed in</span>
+    <span><b class="ms ms-late"></b> handed in late</span>
+    <span><b class="ms ms-missing"></b> missing</span>
+    <span><b class="ms ms-soon"></b> due within a week</span>
+    <span><b class="ms ms-upcoming"></b> later</span>
+  </div>
+</div>

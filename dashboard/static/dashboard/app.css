@@ -163,3 +163,15 @@ pre.example { background: #f5f7fb; border: 1px solid #e6eaf0; border-radius: 8px
 .status-none { background: #d5dae2; color: #2f3847; }
 .trend { color: #5d6779; }
 .tag { color: #9a4d00; }
+
+/* the milestone bar on the student timeline and on the supervisor's view of a student */
+.milestones { display: flex; gap: 5px; }
+.milestones .ms { flex: 1; height: 26px; border-radius: 5px; display: grid; place-items: center; }
+.milestones .ms i { font-style: normal; font-size: 0.75rem; font-weight: 700; color: #fff; }
+.ms-done { background: #1f7a45; }
+.ms-late { background: #f0b429; } .milestones .ms-late i { color: #3a2a00; }
+.ms-missing { background: #c0352d; }
+.ms-soon { background: #f69240; } .milestones .ms-soon i { color: #3a2a00; }
+.ms-upcoming { background: #d5dae2; } .milestones .ms-upcoming i { color: #2f3847; }
+.milestone-key { display: flex; flex-wrap: wrap; gap: 0.4rem 1.1rem; }
+.milestone-key b.ms { display: inline-block; width: 12px; height: 12px; border-radius: 3px; vertical-align: -1px; margin-right: 0.3rem; }

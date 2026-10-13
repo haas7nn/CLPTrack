@@ -70,6 +70,13 @@ def timeline_for(student, now=None):
     return rows
 
 
+def progress_for(rows):
+    """How far through the deliverables a student is: how many are handed in, out of how many, as a percent."""
+    total = len(rows)
+    done = sum(1 for r in rows if r["status"] in ("done", "late"))
+    return {"done": done, "total": total, "percent": round(100 * done / total) if total else 0}
+
+
 @role_required("student")
 def student_home(request):
     now = timezone.now()
@@ -81,6 +88,7 @@ def student_home(request):
         next_row = dict(upcoming[0], days_left=(upcoming[0]["deliverable"].due_at - now).days)
     return render(request, "dashboard/student_home.html", {
         "rows": rows, "risk": latest, "next_row": next_row, "steps": next_steps(request.user, rows, now),
+        "progress": progress_for(rows),
         "feedback": request.user.feedback_received.select_related("supervisor")[:5],
         "emails": NotificationLog.objects.filter(recipient=request.user).order_by("-sent_at")[:5],
         "submitted_count": sum(1 for r in rows if r["status"] in ("done", "late")),

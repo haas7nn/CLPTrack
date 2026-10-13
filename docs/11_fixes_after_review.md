@@ -66,3 +66,11 @@ days and under two days, so a missed day sends a reminder late and not never.
 One more thing the review taught: two of my own tests took the date in UTC. They passed all day and
 failed between midnight and three in the morning in Bahrain, when the UTC date is still yesterday. They
 now use the local date, the same as the code. 86 tests.
+
+## The milestone bar
+
+The student timeline, and the supervisor's view of a student, now open with a bar of ten blocks, one per
+deliverable in order, coloured by where the student stands on it: handed in, handed in late, missing, due
+within a week, or later. `progress_for(rows)` in `dashboard/views.py` counts what is handed in and works
+out the percent from the same rows the timeline shows, so the bar cannot disagree with the list under it.
+The template is `templates/dashboard/_progress.html`, used on both pages. 87 tests.

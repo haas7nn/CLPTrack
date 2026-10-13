@@ -187,3 +187,24 @@ class NextStepsTests(TestCase):
         self.assertTrue(any("1 agreed action is still open" in t for t in steps))
         self.assertTrue(any("Proposal is due in" in t for t in steps))
         self.assertEqual(steps[0], "Upload Reflection 1, it is 3 days overdue")
+
+
+class ProgressBarTests(TestCase):
+    def test_the_milestone_bar_counts_what_is_handed_in(self):
+        from datetime import timedelta
+        from django.utils import timezone
+        from progress.models import Deliverable, Submission
+        from dashboard.views import progress_for, timeline_for
+        now = timezone.now()
+        student = User.objects.create_user("stu", role="student", password="x")
+        first = Deliverable.objects.create(title="Reflection 1", order=1, due_at=now - timedelta(days=6))
+        Deliverable.objects.create(title="Proposal", order=2, due_at=now - timedelta(days=1))
+        Deliverable.objects.create(title="Reflection 2", order=3, due_at=now + timedelta(days=3))
+        Deliverable.objects.create(title="Thesis", order=4, due_at=now + timedelta(days=60))
+        Submission.objects.create(student=student, deliverable=first, filename="r1.pdf", submitted_at=now - timedelta(days=7))
+        self.assertEqual(progress_for(timeline_for(student, now)), {"done": 1, "total": 4, "percent": 25})
+        self.client.login(username="stu", password="x")
+        page = self.client.get(reverse("student_home"))
+        self.assertContains(page, "1 of 4 handed in, 25%")
+        for state in ("ms-done", "ms-missing", "ms-soon", "ms-upcoming"):   # one block of each kind
+            self.assertContains(page, f'class="ms {state}" title=')

@@ -11,7 +11,7 @@ from django.utils.http import content_disposition_header
 from django.views.decorators.http import require_POST
 
 from accounts.models import User
-from dashboard.views import role_required, timeline_for
+from dashboard.views import progress_for, role_required, timeline_for
 from risk import scoring
 from .forms import FeedbackForm, MeetingForm, SubmissionForm
 from .models import Action, Deliverable, Meeting, Submission
@@ -132,9 +132,11 @@ def student_detail(request, student_id):
             messages.success(request, "Your feedback was saved.")
             return redirect("student_detail", student_id=student.id)
     history = list(student.risk_scores.order_by("scored_on").values("scored_on", "score"))
+    rows = timeline_for(student)
     return render(request, "progress/student_detail.html", {
         "student": student,
-        "rows": timeline_for(student),
+        "rows": rows,
+        "progress": progress_for(rows),
         "meetings": student.meetings.prefetch_related("actions"),
         "feedback": student.feedback_received.select_related("supervisor"),
         "risk": student.risk_scores.first(),
