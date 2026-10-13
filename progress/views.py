@@ -9,6 +9,7 @@ from django.views.decorators.http import require_POST
 
 from accounts.models import User
 from dashboard.views import role_required, timeline_for
+from risk import scoring
 from .forms import FeedbackForm, MeetingForm, SubmissionForm
 from .models import Action, Deliverable, Meeting, Submission
 
@@ -35,6 +36,7 @@ def submit(request, deliverable_id):
         else:
             Submission.objects.create(student=request.user, deliverable=deliverable, **details)
             messages.success(request, f"Your file for {deliverable.title} was uploaded.")
+        scoring.save_today(request.user)   # the colour follows the upload straight away
         return redirect("student_home")
     return render(request, "progress/submit.html", {"form": form, "deliverable": deliverable, "existing": existing})
 
@@ -49,6 +51,7 @@ def meetings(request):
         meeting.save()
         for line in form.action_lines():
             Action.objects.create(meeting=meeting, description=line)
+        scoring.save_today(request.user)
         messages.success(request, "Your meeting was recorded.")
         return redirect("meetings")
     my_meetings = request.user.meetings.prefetch_related("actions")
@@ -63,6 +66,7 @@ def action_done(request, action_id):
     action.done = True
     action.done_at = timezone.now()
     action.save()
+    scoring.save_today(request.user)
     return redirect("meetings")
 
 
@@ -108,7 +112,8 @@ def student_detail(request, student_id):
     """One student's full picture.
 
     The student's own supervisor sees it and can leave feedback. The coordinator sees it for any
-    student, read only. Students and other supervisors get a 404, so they cannot even tell the page exists.
+    student, read only. Another supervisor gets a 404, so they cannot tell the page exists, and a
+    student gets a 403.
     """
     student = student_for(request.user, student_id)
     can_write = request.user == student.supervisor
@@ -153,6 +158,7 @@ def meeting_review(request, meeting_id):
     meeting.status = decision
     meeting.reviewed_at = timezone.now()
     meeting.save()
+    scoring.save_today(meeting.student)   # a meeting marked as not held changes the score at once
     messages.success(request, "Meeting confirmed." if decision == Meeting.Status.CONFIRMED
                      else "Meeting marked as not held. It no longer counts towards the score.")
     return redirect("student_detail", student_id=meeting.student_id)

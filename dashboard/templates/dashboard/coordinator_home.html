@@ -74,7 +74,7 @@
         <td class="muted text-nowrap">{{ d.deliverable.due_at|date:"j M" }}</td>
         <td>{{ d.submitted }} of {{ totals.students }}</td>
         <td>{% if d.late %}<span class="fw-semibold" style="color:#b85e00">{{ d.late }}</span>{% else %}0{% endif %}</td>
-        <td>{% if d.due %}{% if d.missing %}<span class="text-danger fw-semibold">{{ d.missing }}</span>{% else %}0{% endif %}{% else %}<span class="muted small">due in {{ d.days_left }} days</span>{% endif %}</td>
+        <td>{% if d.due %}{% if d.missing %}<span class="text-danger fw-semibold">{{ d.missing }}</span>{% else %}0{% endif %}{% else %}<span class="muted small">{% if d.days_left == 0 %}due today{% else %}due in {{ d.days_left }} day{{ d.days_left|pluralize }}{% endif %}</span>{% endif %}</td>
         <td class="pe-4"><div class="bar"><div class="bar-fill" style="width:{{ d.percent }}%"></div></div><span class="muted small">{{ d.percent }}%</span></td>
       </tr>
     {% empty %}<tr><td colspan="6" class="muted ps-4">No deliverables have been set up yet.</td></tr>{% endfor %}

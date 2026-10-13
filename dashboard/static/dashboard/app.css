@@ -155,3 +155,11 @@ pre.example { background: #f5f7fb; border: 1px solid #e6eaf0; border-radius: 8px
   .status { border: 1px solid #999; color: #000 !important; background: #fff !important; }
   .report-item, tr { break-inside: avoid; }
 }
+
+/* badge colours checked for contrast: every badge text is at least 4.5 to 1 against its background */
+.status-green { background: #1f7a45; }
+.status-amber { background: #f0b429; color: #3a2a00; }
+.status-red { background: #c0352d; }
+.status-none { background: #d5dae2; color: #2f3847; }
+.trend { color: #5d6779; }
+.tag { color: #9a4d00; }

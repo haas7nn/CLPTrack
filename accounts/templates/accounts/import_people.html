@@ -11,9 +11,7 @@
       <form method="post" enctype="multipart/form-data">{% csrf_token %}
         <div class="mb-3"><label class="form-label" for="id_file">CSV file</label>
           <input class="form-control" type="file" name="file" id="id_file" accept=".csv" required>{{ form.file.errors }}</div>
-        <div class="mb-3"><label class="form-label" for="id_first_password">First password for the new accounts</label>
-          {{ form.first_password }}{{ form.first_password.errors }}
-          <div class="muted small mt-1">Everyone in the file starts with this password and must choose their own the first time they sign in.</div></div>
+        <div class="muted small mb-3">Each new person gets their own first password, shown to you once on this page, and must choose their own the first time they sign in.</div>
         <button class="btn btn-navy">Add these people</button>
       </form>
     </div></div>
@@ -21,12 +19,19 @@
 
   <div class="col-lg-7">
     {% if result %}
-    <div class="card mb-4"><div class="card-body p-4">
-      <h2 class="section-title">Done</h2>
-      <p class="mb-2"><b>{{ result.total }}</b> account{{ result.total|pluralize }} created: {{ result.counts.student }} student{{ result.counts.student|pluralize }}, {{ result.counts.supervisor }} supervisor{{ result.counts.supervisor|pluralize }}, {{ result.counts.coordinator }} coordinator{{ result.counts.coordinator|pluralize }}.</p>
-      {% if result.skipped %}<p class="muted mb-2">Already had an account, left as they were: {{ result.skipped|join:", " }}.</p>{% endif %}
-      <a class="btn btn-outline-navy btn-sm" href="{% url 'coordinator_home' %}">See the cohort</a>
-    </div></div>
+    <div class="card table-card mb-4">
+      <div class="p-4 pb-2">
+        <h2 class="section-title">Done, {{ result.created|length }} account{{ result.created|length|pluralize }} created</h2>
+        <p class="mb-1"><b>Copy or print this list now.</b> These first passwords are shown once and are not kept anywhere you can read them again. Give each person theirs directly.</p>
+        {% if result.skipped %}<p class="muted mb-1">Already had an account, left as they were: {{ result.skipped|join:", " }}.</p>{% endif %}
+        <button class="btn btn-outline-navy btn-sm no-print" onclick="window.print()">Print this list</button>
+        <a class="btn btn-outline-navy btn-sm no-print" href="{% url 'coordinator_home' %}">See the cohort</a>
+      </div>
+      <table class="table">
+        <thead><tr><th class="ps-4">Username</th><th>Name</th><th>Role</th><th class="pe-4">First password</th></tr></thead>
+        <tbody>{% for c in result.created %}<tr><td class="ps-4 fw-semibold">{{ c.username }}</td><td>{{ c.name }}</td><td>{{ c.role }}</td><td class="pe-4"><code>{{ c.password }}</code></td></tr>{% endfor %}</tbody>
+      </table>
+    </div>
     {% endif %}
     {% if problems %}
     <div class="card mb-4"><div class="card-body p-4">
@@ -37,7 +42,7 @@
     {% endif %}
     <div class="card"><div class="card-body p-4">
       <h2 class="section-title">What the file looks like</h2>
-      <p class="muted">The first line names the columns. Only <b>username</b> and <b>role</b> are required. The role is student, supervisor or coordinator. The supervisor column holds the username of the student's supervisor, who can be in the same file.</p>
+      <p class="muted">The first line names the columns. Only <b>username</b> and <b>role</b> are required. The role is student or supervisor. A coordinator is added in Admin. The supervisor column holds the username of the student's supervisor, who can be in the same file.</p>
       <pre class="example">{{ example }}</pre>
       <a class="btn btn-outline-navy btn-sm" href="{% url 'import_example' %}">Download this example</a>
     </div></div>

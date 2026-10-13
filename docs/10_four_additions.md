@@ -23,8 +23,10 @@ is never wrong after a change.
 
 Question it answers: how do 87 students get into the system?
 
-The coordinator opens Add people, chooses a csv file and types a first password. Only `username` and
-`role` are required columns. The rule is all or nothing: if one line is wrong, no account is created
+The coordinator opens Add people and chooses a csv file. Only `username` and `role` are required
+columns. Every new account gets its own random first password, shown to the coordinator once on the
+result page. One shared password would let anyone who knows a classmate's username sign in as them
+first. Coordinators cannot be created from a file, that stays a deliberate step in Admin. The rule is all or nothing: if one line is wrong, no account is created
 and every problem is listed with its line number.
 
 Where: `accounts/importer.py` has three functions that run in order. `read_rows` reads the file,
@@ -61,5 +63,5 @@ function that decides who may see a student, used by both the student page and t
 
 ## Tests
 
-72 tests. Seventeen new: five for score settings, four for passwords, five for adding people, three
-for the report.
+Tests cover each of the four: score settings, passwords including refusing the same password again,
+adding people including messy files, and the report. Run the suite for the current count.

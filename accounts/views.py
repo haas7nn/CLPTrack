@@ -19,6 +19,10 @@ class ChangePassword(auth_views.PasswordChangeView):
     success_url = reverse_lazy("home")
 
     def form_valid(self, form):
+        # choosing the same password again would leave a first password in place
+        if form.cleaned_data["new_password1"] == form.cleaned_data["old_password"]:
+            form.add_error("new_password1", "Choose a password that is different from your current one.")
+            return self.form_invalid(form)
         form.user.must_change_password = False
         messages.success(self.request, "Your password was changed.")
         return super().form_valid(form)
@@ -42,8 +46,7 @@ def import_people(request):
         if not problems:
             new, skipped, problems = importer.check_rows(rows)
             if not problems:
-                result = {"counts": importer.create_accounts(new, form.cleaned_data["first_password"]), "skipped": skipped}
-                result["total"] = sum(result["counts"].values())
+                result = {"created": importer.create_accounts(new), "skipped": skipped}
                 form = ImportForm()
     return render(request, "accounts/import_people.html", {
         "form": form, "result": result, "problems": problems, "example": importer.EXAMPLE})

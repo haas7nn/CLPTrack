@@ -147,3 +147,42 @@ class ScoreSettingsTests(TestCase):
         RiskScore.objects.create(student=self.student, scored_on=timezone.localdate(), score=10, status="green", breakdown={})
         self.client.login(username="stu", password="x")
         self.assertContains(self.client.get(reverse("student_home")), "Below 25 green, 25 to 49 amber, 50 and above red.")
+
+
+class ProximityAndLabelTests(TestCase):
+    def setUp(self):
+        from accounts.models import User
+        self.student = User.objects.create_user("stu", role="student", password="x")
+
+    def test_uploading_for_the_nearest_deadline_does_not_hide_the_next_one(self):
+        from datetime import timedelta
+        from django.utils import timezone
+        from progress.models import Deliverable, Submission
+        from risk import scoring
+        now = timezone.now()
+        near = Deliverable.objects.create(title="Proposal", order=1, due_at=now + timedelta(days=2))
+        Deliverable.objects.create(title="Reflection 2", order=2, due_at=now + timedelta(days=4))
+        self.assertAlmostEqual(scoring.proximity_indicator(self.student, now), 5 / 7, places=2)
+        Submission.objects.create(student=self.student, deliverable=near, filename="p.pdf", submitted_at=now)
+        self.assertAlmostEqual(scoring.proximity_indicator(self.student, now), 3 / 7, places=2)   # the second one now counts
+
+    def test_labels_say_one_day_and_today(self):
+        from datetime import timedelta
+        from django.utils import timezone
+        from dashboard.views import timeline_for
+        from progress.models import Deliverable, Submission
+        now = timezone.now()
+        Deliverable.objects.create(title="A", order=1, due_at=now + timedelta(hours=5))
+        Deliverable.objects.create(title="B", order=2, due_at=now + timedelta(days=1, hours=5))
+        late = Deliverable.objects.create(title="C", order=3, due_at=now - timedelta(days=3))
+        Submission.objects.create(student=self.student, deliverable=late, filename="c.pdf",
+                                  submitted_at=late.due_at + timedelta(days=1, hours=2))
+        labels = {row["deliverable"].title: row["label"] for row in timeline_for(self.student, now)}
+        self.assertEqual(labels, {"A": "Due today", "B": "Due in 1 day", "C": "Submitted 1 day late"})
+
+    def test_a_token_with_unusual_characters_is_refused_not_an_error(self):
+        from django.test import override_settings
+        from django.urls import reverse
+        with override_settings(DAILY_TASK_TOKEN="right-token"):
+            response = self.client.post(reverse("run_daily"), headers={"X-Task-Token": "s\u00e9cret"})
+        self.assertEqual(response.status_code, 403)

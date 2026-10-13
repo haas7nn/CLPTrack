@@ -1,7 +1,8 @@
-"""One web address that runs the daily job.
+"""The pages and addresses that belong to the score.
 
-The free host has no scheduler, so a GitHub workflow calls this address once a day
-with a secret token. Without the right token nothing happens.
+run_daily and test_email are addresses a GitHub workflow calls with a secret token, because the
+free host has no scheduler. Without the right token nothing happens.
+score_settings is the coordinator's page for the weights and cut off points, with a preview.
 """
 import hmac
 
@@ -21,13 +22,18 @@ from .forms import ScoreSettingsForm
 from .models import ScoreSettings
 
 
+def token_is_right(request):
+    """True only when the caller sent the secret token. An empty token switches the address off."""
+    expected = settings.DAILY_TASK_TOKEN
+    given = request.headers.get("X-Task-Token", "")
+    # compare_digest stops someone guessing the token one character at a time
+    return bool(expected) and hmac.compare_digest(expected.encode(), given.encode())
+
+
 @csrf_exempt
 @require_POST
 def run_daily(request):
-    expected = getattr(settings, "DAILY_TASK_TOKEN", "")
-    given = request.headers.get("X-Task-Token", "")
-    # compare_digest stops someone guessing the token one character at a time
-    if not expected or not hmac.compare_digest(expected, given):
+    if not token_is_right(request):
         return HttpResponseForbidden("no")
     call_command("run_daily")
     return HttpResponse("done")
@@ -40,9 +46,7 @@ def test_email(request):
 
     Needs the same token as the daily job. The address is taken from the request body (field "to").
     """
-    expected = getattr(settings, "DAILY_TASK_TOKEN", "")
-    given = request.headers.get("X-Task-Token", "")
-    if not expected or not hmac.compare_digest(expected, given):
+    if not token_is_right(request):
         return HttpResponseForbidden("no")
     to = request.POST.get("to", "")
     if not to:

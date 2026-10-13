@@ -1,5 +1,6 @@
 """The forms people fill in: upload work, record a meeting, leave feedback."""
 from django import forms
+from django.utils import timezone
 
 from .models import Feedback, Meeting
 
@@ -31,6 +32,13 @@ class MeetingForm(forms.ModelForm):
         model = Meeting
         fields = ["held_on", "discussed"]
         widgets = {"held_on": forms.DateInput(attrs={"type": "date"}), "discussed": forms.Textarea(attrs={"rows": 4})}
+
+    def clean_held_on(self):
+        """A meeting in the future has not happened, and it would wrongly reset the meeting gap."""
+        held_on = self.cleaned_data["held_on"]
+        if held_on > timezone.localdate():
+            raise forms.ValidationError("Choose today or an earlier date, this meeting has not happened yet.")
+        return held_on
 
     def action_lines(self):
         return [line.strip() for line in self.cleaned_data.get("actions", "").splitlines() if line.strip()]

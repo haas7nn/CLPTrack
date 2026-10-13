@@ -5,7 +5,7 @@ services:
     runtime: python
     plan: free
     buildCommand: ./build.sh
-    startCommand: gunicorn clptrack.wsgi --log-file -
+    startCommand: gunicorn clptrack.wsgi --timeout 120 --log-file -
     envVars:
       - key: PYTHON_VERSION
         value: 3.12.6

@@ -50,6 +50,6 @@ decision is kept in `reviewed_at`.
 
 ## Tests
 
-55 tests. Seven new: a new meeting waits, a supervisor confirms, only the student's own supervisor can
+Seven tests cover this: a new meeting waits, a supervisor confirms, only the student's own supervisor can
 review, a rejected meeting and its actions stop counting, the student is told, an unknown decision is
 refused, and the coordinator's waiting count.

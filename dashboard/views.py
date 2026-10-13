@@ -1,10 +1,13 @@
-"""The pages people actually see.
+"""The pages people actually see, and the counting behind them.
 
-home            works out who you are and sends you to your page
-student_home    the student's list of deadlines
-supervisor_home the supervisor's table of all their students
-coordinator_home every supervisor and their students
-export_csv      the same table as a spreadsheet file
+home             works out who you are and sends you to your page
+student_home     the student's deadlines, what to do next, feedback and score
+supervisor_home  the supervisor's table of their students, the week's activity and alerts
+coordinator_home the whole cohort with statistics, then every student under their supervisor
+export_csv       the student table as a spreadsheet file
+
+timeline_for and summary_for are the two functions every page shares, so the numbers on
+the student page, the supervisor page, the cohort page and the spreadsheet always agree.
 """
 import csv
 
@@ -42,23 +45,27 @@ def home(request):
     return redirect("coordinator_home")
 
 
+def days_text(n):
+    """1 day, 2 days: the number with the right word after it."""
+    return f"{n} day{'' if n == 1 else 's'}"
+
+
 def timeline_for(student, now=None):
     """Goes through every deliverable and works out where this student stands on each one."""
     now = now or timezone.now()
-    submissions = {s.deliverable_id: s for s in Submission.objects.filter(student=student).order_by("submitted_at")}
+    submissions = {s.deliverable_id: s for s in Submission.objects.filter(student=student).defer("data").order_by("submitted_at")}
     rows = []
     for d in Deliverable.objects.all():
         sub = submissions.get(d.id)
         days_left = (d.due_at - now).days
         if sub:
             late = sub.days_late()
-            status, label = ("late", f"Submitted {late} days late") if late else ("done", "Submitted")
+            status, label = ("late", f"Submitted {days_text(late)} late") if late else ("done", "Submitted")
         elif d.due_at < now:
             status, label = "missing", "Missing"
-        elif days_left <= 7:
-            status, label = "soon", f"Due in {days_left} days"
         else:
-            status, label = "upcoming", f"Due in {days_left} days"
+            status = "soon" if days_left <= 7 else "upcoming"
+            label = "Due today" if days_left == 0 else f"Due in {days_text(days_left)}"
         rows.append({"deliverable": d, "submission": sub, "status": status, "label": label})
     return rows
 
@@ -85,7 +92,7 @@ def summary_for(student, now, due_count):
     """One line about a student: their score, how much is in, how much is missing, last meeting."""
     rows = timeline_for(student, now)
     latest = RiskScore.objects.filter(student=student).first()
-    week_ago = RiskScore.objects.filter(student=student, scored_on__lte=now.date() - timedelta(days=7)).first()
+    week_ago = RiskScore.objects.filter(student=student, scored_on__lte=timezone.localdate(now) - timedelta(days=7)).first()
     trend = (latest.score - week_ago.score) if latest and week_ago else None
     return {
         "user": student,
@@ -121,7 +128,7 @@ def recent_activity(supervisor, now, days=7):
     """What this supervisor's students did in the last week: uploads and meetings, newest first."""
     since = now - timedelta(days=days)
     items = []
-    for sub in Submission.objects.filter(student__supervisor=supervisor, submitted_at__gte=since).select_related("student", "deliverable"):
+    for sub in Submission.objects.filter(student__supervisor=supervisor, submitted_at__gte=since).defer("data").select_related("student", "deliverable"):
         items.append({"when": sub.submitted_at, "student": sub.student, "text": f"uploaded {sub.deliverable.title}"})
     for m in Meeting.objects.filter(student__supervisor=supervisor, created_at__gte=since).select_related("student"):
         items.append({"when": m.created_at, "student": m.student, "text": f"recorded a meeting held on {m.held_on:%-d %B}"})
@@ -134,11 +141,12 @@ def next_steps(student, rows, now):
     for r in rows:
         if r["status"] == "missing":
             days = (now - r["deliverable"].due_at).days
-            steps.append((0, f"Upload {r['deliverable'].title}, it is {days} day{'s' if days != 1 else ''} overdue", r["deliverable"]))
+            overdue = "it was due today" if days == 0 else f"it is {days_text(days)} overdue"
+            steps.append((0, f"Upload {r['deliverable'].title}, {overdue}", r["deliverable"]))
     for m in Meeting.objects.filter(student=student, status=Meeting.Status.REJECTED):
         steps.append((0, f"Your supervisor marked the meeting of {m.held_on:%-d %B} as not held, record the real one", None))
     last = Meeting.counted().filter(student=student).order_by("-held_on").first()
-    gap = (now.date() - last.held_on).days if last else None
+    gap = (timezone.localdate(now) - last.held_on).days if last else None
     if last is None:
         steps.append((1, "Record your first meeting with your supervisor", None))
     elif gap > 7:
@@ -148,7 +156,9 @@ def next_steps(student, rows, now):
         steps.append((2, f"{open_actions} agreed action{'s are' if open_actions != 1 else ' is'} still open, tick them off when done", None))
     for r in rows:
         if r["status"] == "soon":
-            steps.append((3, f"{r['deliverable'].title} is due in {(r['deliverable'].due_at - now).days} days and nothing is uploaded yet", r["deliverable"]))
+            left = (r["deliverable"].due_at - now).days
+            when = "today" if left == 0 else f"in {days_text(left)}"
+            steps.append((3, f"{r['deliverable'].title} is due {when} and nothing is uploaded yet", r["deliverable"]))
             break
     return [{"text": t, "deliverable": d} for _, t, d in sorted(steps, key=lambda x: x[0])]
 
@@ -178,7 +188,7 @@ def deliverable_stats(students, now):
     for d in Deliverable.objects.all():
         # one student counts once, even if an old record holds two files for the same deliverable
         first = {}
-        for sub in Submission.objects.filter(deliverable=d, student__in=students).order_by("submitted_at"):
+        for sub in Submission.objects.filter(deliverable=d, student__in=students).defer("data").order_by("submitted_at"):
             first.setdefault(sub.student_id, sub)
         submitted = len(first)
         due = d.due_at < now
@@ -253,7 +263,7 @@ def coordinator_home(request):
             "name": name, "rows": rows, "counts": counts, "total": len(rows), "missing": missing, "waiting": waiting,
             "average": round(sum(scores) / len(scores)) if scores else None,
             "no_meeting": sum(1 for row in rows if row["last_meeting"] is None
-                              or (now.date() - row["last_meeting"].held_on).days > 14),
+                              or (timezone.localdate(now) - row["last_meeting"].held_on).days > 14),
         }
 
     supervisors = list(User.objects.filter(role="supervisor").order_by("last_name", "first_name"))
@@ -274,7 +284,7 @@ def coordinator_home(request):
     return render(request, "dashboard/coordinator_home.html", {
         "groups": groups, "totals": totals, "attention": attention,
         "deliverables": deliverable_stats([row["user"] for row in everyone], now),
-        "meetings": meeting_stats(everyone, now.date()),
+        "meetings": meeting_stats(everyone, timezone.localdate(now)),
         "history": colour_history(),
     })
 

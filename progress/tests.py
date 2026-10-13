@@ -53,6 +53,12 @@ class ProgressTests(TestCase):
         meeting = Meeting.objects.get(student=self.student)
         self.assertEqual(meeting.actions.count(), 2)
 
+    def test_a_meeting_cannot_be_recorded_for_a_future_date(self):
+        future = (timezone.localdate() + timedelta(days=30)).isoformat()
+        response = self.client.post(reverse("meetings"), {"held_on": future, "discussed": "Not yet", "actions": ""})
+        self.assertContains(response, "this meeting has not happened yet")
+        self.assertEqual(Meeting.objects.count(), 0)
+
     def test_student_cannot_tick_another_students_action(self):
         other = User.objects.create_user("other", role="student", password="x")
         meeting = Meeting.objects.create(student=other, held_on="2026-10-01", discussed="x")
@@ -237,3 +243,21 @@ class ReportTests(TestCase):
         self.assertEqual(self.client.get(self.url).status_code, 404)
         self.client.login(username="coord", password="x")
         self.assertEqual(self.client.get(self.url).status_code, 200)
+
+
+class ScoreFollowsTheRecordsTests(TestCase):
+    """The colour on screen is worked out again the moment a record changes, not only the next morning."""
+
+    def test_uploading_overdue_work_changes_the_score_straight_away(self):
+        from risk import scoring
+        supervisor = User.objects.create_user("sup", role="supervisor", password="x")
+        student = User.objects.create_user("stu", role="student", password="x", supervisor=supervisor)
+        overdue = Deliverable.objects.create(title="Reflection 1", order=1, due_at=timezone.now() - timedelta(hours=3))
+        before = scoring.save_today(student)["score"]
+        self.client.login(username="stu", password="x")
+        pdf = SimpleUploadedFile("r1.pdf", b"%PDF-1.4 late but in", content_type="application/pdf")
+        self.client.post(reverse("submit", args=[overdue.id]), {"file": pdf})
+        after = RiskScore.objects.get(student=student, scored_on=timezone.localdate())
+        self.assertLess(after.score, before)
+        self.assertEqual(after.breakdown["overdue"]["points"], 0.0)
+        self.assertEqual(RiskScore.objects.filter(student=student).count(), 1)   # today's row was replaced, not added

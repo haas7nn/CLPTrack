@@ -76,3 +76,33 @@ class BrevoBackendTests(TestCase):
         self.assertEqual(payload["sender"], {"email": "from@example.com", "name": "CLPTrack"})
         self.assertEqual(payload["to"], [{"email": "to@example.com"}])
         self.assertEqual(payload["subject"], "Hello")
+
+
+class OneBadAddressTests(TestCase):
+    """An email the mail service refuses must not stop everybody else's."""
+
+    def test_the_other_students_still_get_their_reminder(self):
+        from datetime import timedelta
+        from unittest import mock
+        from django.core import mail
+        from django.utils import timezone
+        from accounts.models import User
+        from notifications import emails
+        from notifications.models import NotificationLog
+        from progress.models import Deliverable
+        now = timezone.now()
+        Deliverable.objects.create(title="Reflection 2", order=1, due_at=now + timedelta(days=3, hours=1))
+        for name in ("first", "broken", "last"):
+            User.objects.create_user(name, role="student", password="x", email=f"{name}@example.com")
+        real_send = emails.send_mail
+
+        def refuse_one(subject, body, sender, to):
+            if to == ["broken@example.com"]:
+                raise OSError("the mail service refused this address")
+            return real_send(subject, body, sender, to)
+
+        with mock.patch.object(emails, "send_mail", side_effect=refuse_one):
+            sent = emails.send_deadline_reminders(now)
+        self.assertEqual(sent, 2)
+        self.assertEqual(sorted(m.to[0] for m in mail.outbox), ["first@example.com", "last@example.com"])
+        self.assertFalse(NotificationLog.objects.filter(recipient__username="broken").exists())   # so it is tried again tomorrow

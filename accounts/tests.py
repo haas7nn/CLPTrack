@@ -93,6 +93,17 @@ class PasswordTests(TestCase):
         self.assertFalse(self.user.must_change_password)
         self.assertEqual(self.client.get(reverse("student_home")).status_code, 200)   # now the site opens
 
+    def test_choosing_the_same_password_again_is_refused(self):
+        from django.urls import reverse
+        self.user.must_change_password = True
+        self.user.save()
+        self.client.login(username="stu", password="first-pass-123")
+        response = self.client.post(reverse("password_change"), {
+            "old_password": "first-pass-123", "new_password1": "first-pass-123", "new_password2": "first-pass-123"})
+        self.assertContains(response, "different from your current one")
+        self.user.refresh_from_db()
+        self.assertTrue(self.user.must_change_password)
+
     def test_forgotten_password_sends_a_link_that_works_once(self):
         import re
         from django.core import mail
@@ -126,23 +137,37 @@ class ImportPeopleTests(TestCase):
         User.objects.create_user("coord", role="coordinator", password="x")
         self.client.login(username="coord", password="x")
 
-    def upload(self, text, password="first-pass-2026"):
+    def upload(self, text):
         from django.core.files.uploadedfile import SimpleUploadedFile
-        return self.client.post(self.url, {"file": SimpleUploadedFile("people.csv", text.encode()), "first_password": password})
+        return self.client.post(self.url, {"file": SimpleUploadedFile("people.csv", text.encode())})
 
     def test_creates_supervisors_then_students_and_links_them(self):
         response = self.upload("username,first_name,last_name,role,student_id,section,supervisor\n"
                                "202300101,Khalid,Jasim,student,202300101,8,dr.salem\n"     # the student comes first on purpose
                                "dr.salem,Huda,Salem,supervisor,,,\n")
-        self.assertEqual(response.context["result"]["counts"], {"student": 1, "supervisor": 1, "coordinator": 0})
+        created = response.context["result"]["created"]
+        self.assertEqual([c["role"] for c in created], ["Supervisor", "Student"])
         student = User.objects.get(username="202300101")
         self.assertEqual(student.supervisor.username, "dr.salem")
-        self.assertTrue(student.must_change_password and student.check_password("first-pass-2026"))
+        self.assertTrue(student.must_change_password)
+
+    def test_every_new_account_gets_its_own_first_password(self):
+        response = self.upload("username,role\none,student\ntwo,student\n")
+        passwords = {c["username"]: c["password"] for c in response.context["result"]["created"]}
+        self.assertNotEqual(passwords["one"], passwords["two"])
+        self.assertTrue(User.objects.get(username="one").check_password(passwords["one"]))
+        self.assertFalse(User.objects.get(username="two").check_password(passwords["one"]))   # one cannot sign in as two
+        self.assertContains(response, passwords["two"])                                       # shown once to the coordinator
+
+    def test_a_coordinator_cannot_be_added_from_a_file(self):
+        response = self.upload("username,role\nboss,coordinator\n")
+        self.assertContains(response, "a coordinator cannot be added from a file")
+        self.assertFalse(User.objects.filter(username="boss").exists())
 
     def test_someone_who_already_has_an_account_is_left_alone(self):
         User.objects.create_user("dr.salem", role="supervisor", password="their-own-123", first_name="Huda")
-        response = self.upload("username,role,first_name\ndr.salem,supervisor,Changed\nnew.one,supervisor,New\n")
-        self.assertEqual(response.context["result"]["skipped"], ["dr.salem"])
+        response = self.upload("username,role,first_name\nDR.SALEM,supervisor,Changed\nnew.one,supervisor,New\n")
+        self.assertEqual(response.context["result"]["skipped"], ["dr.salem"])   # found even with capitals
         existing = User.objects.get(username="dr.salem")
         self.assertTrue(existing.first_name == "Huda" and existing.check_password("their-own-123"))
         self.assertTrue(User.objects.filter(username="new.one").exists())
@@ -150,9 +175,16 @@ class ImportPeopleTests(TestCase):
     def test_one_bad_line_means_nothing_is_added(self):
         response = self.upload("username,role,supervisor\ngood.one,supervisor,\nbad.one,teacher,\nlost.one,student,nobody\n")
         self.assertContains(response, "Nothing was added")
-        self.assertContains(response, "Line 3: the role of bad.one must be student, supervisor or coordinator.")
-        self.assertContains(response, "Line 4: the supervisor nobody is not an account and is not in the file.")
+        self.assertContains(response, "Line 3: the role of bad.one must be student or supervisor.")
+        self.assertContains(response, "Line 4: the supervisor nobody is not a supervisor account and is not in the file.")
         self.assertFalse(User.objects.filter(username="good.one").exists())
+
+    def test_messy_files_are_reported_not_crashed(self):
+        self.assertContains(self.upload("username,role\nali,student,extra\n"), "Line 2 has more values than the first line")
+        self.assertContains(self.upload("username,role,email\nali,student,not-an-email\n"), "Line 2: email of ali")
+        self.assertContains(self.upload("username,role\nbad name,student\n"), "Line 2: username of bad name")
+        self.assertContains(self.upload("username,role,section\nali,student," + "9" * 40 + "\n"), "Line 2: section of ali")
+        self.assertEqual(User.objects.filter(role="student").count(), 0)
 
     def test_file_without_the_required_columns_is_refused(self):
         response = self.upload("name,job\nKhalid,student\n")

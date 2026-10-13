@@ -8,8 +8,8 @@ add the five up to get a score out of 100.
     30 to 59   amber
     60 and up  red
 
-The weights, the cut off points and the semester start date can be changed in
-settings.py without touching this file.
+The coordinator changes the weights and the cut off points on the score settings
+page. Until they do, the starting values written below are used.
 """
 from datetime import date
 
@@ -72,7 +72,7 @@ def overdue_indicator(student, now):
 
 def lateness_indicator(student):
     """On average, how many days late is this student, out of the 7 day cap."""
-    submissions = list(Submission.objects.filter(student=student).select_related("deliverable"))
+    submissions = list(Submission.objects.filter(student=student).defer("data").select_related("deliverable"))
     if not submissions:
         return 0.0
     average = sum(s.days_late() for s in submissions) / len(submissions)
@@ -90,10 +90,10 @@ def supervision_indicator(student, today):
 
 def proximity_indicator(student, now):
     """Is the next deadline close, with nothing uploaded for it yet."""
-    upcoming = Deliverable.objects.filter(due_at__gte=now).order_by("due_at").first()
+    # the nearest deadline this student has not handed anything in for
+    upcoming = (Deliverable.objects.filter(due_at__gte=now).exclude(submissions__student=student)
+                .order_by("due_at").first())
     if upcoming is None:
-        return 0.0
-    if Submission.objects.filter(student=student, deliverable=upcoming).exists():
         return 0.0
     days_left = (upcoming.due_at - now).total_seconds() / 86400  # fractional days, so a deadline in 2.5 days counts as 2.5
     if days_left >= PROXIMITY_WINDOW_DAYS:
@@ -125,7 +125,7 @@ def compute(student, now=None, use_weights=None, cutoffs=None):
     use_weights and cutoffs are only given by the what if preview, to try values without saving them.
     """
     now = now or timezone.now()
-    today = now.date()
+    today = timezone.localdate(now)   # the date in Bahrain, not in UTC
     values = {
         "overdue": overdue_indicator(student, now),
         "lateness": lateness_indicator(student),
@@ -138,3 +138,19 @@ def compute(student, now=None, use_weights=None, cutoffs=None):
                  for name, value in values.items()}
     score = round(sum(part["points"] for part in breakdown.values()))
     return {"score": score, "status": status_for(score, cutoffs), "breakdown": breakdown}
+
+
+def save_today(student, now=None):
+    """Works out one student's score and stores it as today's row, replacing an earlier one from today.
+
+    The daily command calls this for everyone. The pages call it for one student straight after an
+    upload, a meeting or a supervisor's decision, so the colour on screen never lags behind the records.
+    """
+    from .models import RiskScore
+    now = now or timezone.now()
+    result = compute(student, now)
+    RiskScore.objects.update_or_create(
+        student=student, scored_on=timezone.localdate(now),
+        defaults={"score": result["score"], "status": result["status"], "breakdown": result["breakdown"]},
+    )
+    return result

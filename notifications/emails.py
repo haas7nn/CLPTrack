@@ -5,6 +5,7 @@ Alerts      to a supervisor, when one of their students changes colour
 Each email is written to the NotificationLog, and the reference field makes sure
 the same reminder or alert is never sent twice.
 """
+import logging
 from datetime import timedelta
 
 from django.conf import settings
@@ -16,6 +17,7 @@ from progress.models import Deliverable, Submission
 from risk.models import RiskScore
 from .models import NotificationLog
 
+logger = logging.getLogger(__name__)
 REMIND_DAYS_BEFORE = (3, 1)  # a reminder three days before and one day before
 
 
@@ -23,7 +25,12 @@ def _send(kind, user, subject, body, reference):
     """Send one email unless it was already sent, and log it."""
     if not user.email or NotificationLog.objects.filter(recipient=user, reference=reference).exists():
         return False
-    send_mail(subject, body, settings.DEFAULT_FROM_EMAIL, [user.email])
+    try:
+        send_mail(subject, body, settings.DEFAULT_FROM_EMAIL, [user.email])
+    except Exception as error:
+        # one address the mail service refuses must not stop everybody else's email
+        logger.warning("email to %s was not sent: %s", user.username, error)
+        return False
     NotificationLog.objects.create(kind=kind, recipient=user, subject=subject, reference=reference)
     return True
 
