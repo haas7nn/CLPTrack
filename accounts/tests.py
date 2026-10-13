@@ -38,3 +38,28 @@ class SeedCohortTests(TestCase):
         self.assertTrue(Submission.objects.filter(student__username="student1").exists())
         self.assertTrue(Meeting.objects.filter(student__username="student4").exists())
         self.assertFalse(RiskScore.objects.filter(student__username="student3", status="green").exists())
+
+
+class SharedPasswordTests(TestCase):
+    def test_sets_the_development_accounts_and_leaves_everyone_else(self):
+        from django.core.management import call_command
+        from accounts.models import User
+        User.objects.create_user("supervisor1", role="supervisor", password="old-one-123")
+        User.objects.create_user("student1", role="student", password="old-one-123")
+        tester = User.objects.create_user("realtester", role="student", password="their-own-123")
+        call_command("shared_password", password="one-for-all-456")
+        self.assertTrue(User.objects.get(username="supervisor1").check_password("one-for-all-456"))
+        self.assertTrue(User.objects.get(username="student1").check_password("one-for-all-456"))
+        tester.refresh_from_db()
+        self.assertTrue(tester.check_password("their-own-123"))  # a real tester keeps their own
+        coordinator = User.objects.get(username="coordinator")   # made because it was missing
+        self.assertTrue(coordinator.is_superuser and coordinator.check_password("one-for-all-456"))
+
+    def test_refuses_a_short_password(self):
+        from django.core.management import call_command
+        from django.core.management.base import CommandError
+        from accounts.models import User
+        User.objects.create_user("student1", role="student", password="old-one-123")
+        with self.assertRaises(CommandError):
+            call_command("shared_password", password="short")
+        self.assertTrue(User.objects.get(username="student1").check_password("old-one-123"))

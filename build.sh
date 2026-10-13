@@ -8,3 +8,5 @@ python manage.py seed_deliverables
 python manage.py ensure_admin
 # optional: load the development cohort when the host sets SEED_COHORT=1 and SEED_PASSWORD
 if [ "${SEED_COHORT:-0}" = "1" ]; then python manage.py seed_cohort; fi
+# optional: one shared password for the development accounts, when the host sets ACCOUNTS_PASSWORD
+if [ -n "${ACCOUNTS_PASSWORD:-}" ]; then python manage.py shared_password; fi
