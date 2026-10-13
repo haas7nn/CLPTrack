@@ -7,7 +7,10 @@
     <h1 class="page-title">{{ student.get_full_name|default:student.username }}</h1>
     <div class="muted">{{ student.student_id }} &middot; section {{ student.section }}{% if student.supervisor %} &middot; supervised by {{ student.supervisor.get_full_name|default:student.supervisor.username }}{% else %} &middot; <span class="text-danger">no supervisor yet</span>{% endif %}</div>
   </div>
-  {% if risk %}<span class="status status-{{ risk.status }} fs-6">{{ risk.get_status_display }}, score {{ risk.score }}</span>{% else %}<span class="status status-none fs-6">Not scored yet</span>{% endif %}
+  <div class="d-flex align-items-center gap-3">
+    <a class="btn btn-outline-navy btn-sm" href="{% url 'student_report' student.id %}">Printable report</a>
+    {% if risk %}<span class="status status-{{ risk.status }} fs-6">{{ risk.get_status_display }}, score {{ risk.score }}</span>{% else %}<span class="status status-none fs-6">Not scored yet</span>{% endif %}
+  </div>
 </div></div>
 
 <div class="row g-4">

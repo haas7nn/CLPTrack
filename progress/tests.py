@@ -201,3 +201,39 @@ class MeetingConfirmationTests(TestCase):
         self.client.login(username="sup", password="x")
         response = self.client.post(reverse("meeting_review", args=[self.meeting.id]), {"decision": "deleted"})
         self.assertEqual(response.status_code, 403)
+
+
+class ReportTests(TestCase):
+    """The printable progress report and who may open it."""
+
+    def setUp(self):
+        self.supervisor = User.objects.create_user("sup", role="supervisor", password="x")
+        self.student = User.objects.create_user("stu", role="student", password="x", supervisor=self.supervisor,
+                                                first_name="Zahra", last_name="Mahmood", student_id="202300001")
+        Deliverable.objects.create(title="Reflection 1", order=1, due_at=timezone.now() - timedelta(days=1))
+        Meeting.objects.create(student=self.student, held_on=timezone.localdate(), discussed="Agreed the scope")
+        for days, score in ((2, 10), (1, 25), (0, 40)):
+            RiskScore.objects.create(student=self.student, scored_on=timezone.localdate() - timedelta(days=days),
+                                     score=score, status="green" if score < 30 else "amber", breakdown={})
+        self.url = reverse("student_report", args=[self.student.id])
+
+    def test_supervisor_gets_the_whole_picture_on_one_page(self):
+        self.client.login(username="sup", password="x")
+        response = self.client.get(self.url)
+        for text in ("CLP progress report", "Zahra Mahmood", "202300001", "Reflection 1", "Missing", "Agreed the scope", "Print or save as PDF"):
+            self.assertContains(response, text)
+        self.assertEqual(response.context["chart"]["points"], "0.0,108.0 320.0,90.0 640.0,72.0")   # three scores, left to right
+
+    def test_student_can_print_their_own_but_not_someone_elses(self):
+        other = User.objects.create_user("stu2", role="student", password="x")
+        self.client.login(username="stu", password="x")
+        self.assertEqual(self.client.get(self.url).status_code, 200)
+        self.assertEqual(self.client.get(reverse("student_report", args=[other.id])).status_code, 403)
+
+    def test_another_supervisor_cannot_open_it_and_the_coordinator_can(self):
+        User.objects.create_user("sup2", role="supervisor", password="x")
+        User.objects.create_user("coord", role="coordinator", password="x")
+        self.client.login(username="sup2", password="x")
+        self.assertEqual(self.client.get(self.url).status_code, 404)
+        self.client.login(username="coord", password="x")
+        self.assertEqual(self.client.get(self.url).status_code, 200)

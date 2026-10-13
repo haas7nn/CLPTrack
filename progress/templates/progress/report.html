@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block title %}Progress report, {{ student.get_full_name|default:student.username }}{% endblock %}
+{% block content %}
+<div class="no-print d-flex justify-content-between align-items-center mb-3">
+  <a class="small" href="{% if back == 'student_home' %}{% url 'student_home' %}{% else %}{% url 'student_detail' student.id %}{% endif %}">&larr; Back</a>
+  <button class="btn btn-navy btn-sm" onclick="window.print()">Print or save as PDF</button>
+</div>
+
+<div class="report card"><div class="card-body p-4 p-md-5">
+  <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 report-head">
+    <div>
+      <div class="muted small text-uppercase fw-semibold">CLP progress report</div>
+      <h1 class="page-title mt-1">{{ student.get_full_name|default:student.username }}</h1>
+      <div class="muted">{{ student.student_id }}{% if student.section %}, section {{ student.section }}{% endif %}{% if student.supervisor %}, supervised by {{ student.supervisor.get_full_name|default:student.supervisor.username }}{% endif %}</div>
+    </div>
+    <div class="text-end">
+      {% if risk %}<span class="status status-{{ risk.status }} fs-6">{{ risk.get_status_display }}, score {{ risk.score }}</span>{% else %}<span class="status status-none fs-6">Not scored yet</span>{% endif %}
+      <div class="muted small mt-2">Printed {{ printed_on|date:"j F Y" }}</div>
+    </div>
+  </div>
+
+  {% if risk %}
+  <h2 class="section-title mt-4">Why this score</h2>
+  <table class="table table-sm report-table">
+    <thead><tr><th>Indicator</th><th class="text-end">Value</th><th class="text-end">Weight</th><th class="text-end">Points</th></tr></thead>
+    <tbody>{% for name, part in risk.breakdown.items %}<tr><td>{{ name|capfirst }}</td><td class="text-end">{{ part.value }}</td><td class="text-end">{{ part.weight }}</td><td class="text-end fw-semibold">{{ part.points }}</td></tr>{% endfor %}</tbody>
+  </table>
+  <div class="muted small">Scored on {{ risk.scored_on|date:"j F" }}. Below {{ amber_from }} green, {{ amber_from }} to {{ amber_to }} amber, {{ red_from }} and above red.</div>
+  {% endif %}
+
+  {% if chart.points and chart.first != chart.last %}
+  <h2 class="section-title mt-4">Score over the semester</h2>
+  <svg viewBox="0 -4 {{ chart.width }} 132" class="report-chart" role="img" aria-label="Score over the semester">
+    <line x1="0" y1="{{ chart.height }}" x2="{{ chart.width }}" y2="{{ chart.height }}" stroke="#c3c9d3"/>
+    <line x1="0" y1="0" x2="{{ chart.width }}" y2="0" stroke="#eef1f6"/>
+    <polyline points="{{ chart.points }}" fill="none" stroke="#0f2b59" stroke-width="2"/>
+  </svg>
+  <div class="d-flex justify-content-between muted small"><span>{{ chart.first|date:"j M" }}</span><span>0 at the bottom, 100 at the top</span><span>{{ chart.last|date:"j M" }}</span></div>
+  {% endif %}
+
+  <h2 class="section-title mt-4">Deliverables</h2>
+  <table class="table table-sm report-table">
+    <thead><tr><th>Deliverable</th><th>Due</th><th>Status</th><th>Handed in</th></tr></thead>
+    <tbody>{% for r in rows %}<tr><td>{{ r.deliverable.order }}. {{ r.deliverable.title }}</td><td class="text-nowrap">{{ r.deliverable.due_at|date:"j M" }}</td><td>{{ r.label }}</td><td class="text-nowrap">{% if r.submission %}{{ r.submission.submitted_at|date:"j M" }}{% endif %}</td></tr>{% endfor %}</tbody>
+  </table>
+
+  <h2 class="section-title mt-4">Meetings</h2>
+  {% for m in meetings %}
+  <div class="report-item">
+    <div class="d-flex justify-content-between flex-wrap gap-2"><b>{{ m.held_on|date:"l j F Y" }}</b><span class="muted small">{{ m.get_status_display }}</span></div>
+    <div>{{ m.discussed|linebreaksbr }}</div>
+    {% for a in m.actions.all %}<div class="small">&bull; {{ a.description }}{% if a.done %} (done){% else %} (open){% endif %}</div>{% endfor %}
+  </div>
+  {% empty %}<p class="muted">No meetings recorded yet.</p>{% endfor %}
+
+  <h2 class="section-title mt-4">Feedback from the supervisor</h2>
+  {% for f in feedback %}
+  <div class="report-item"><div class="muted small">{{ f.created_at|date:"j F Y" }}, {{ f.supervisor.get_full_name|default:f.supervisor.username }}</div>{{ f.text|linebreaksbr }}</div>
+  {% empty %}<p class="muted">No feedback yet.</p>{% endfor %}
+</div></div>
+{% endblock %}

@@ -66,6 +66,43 @@ def action_done(request, action_id):
     return redirect("meetings")
 
 
+def student_for(viewer, student_id, allow_self=False):
+    """Finds a student the viewer is allowed to see, or stops with 403 or 404.
+
+    The coordinator may see anyone, a supervisor only their own students. With allow_self a student
+    may see themselves, which the printable report uses.
+    """
+    if viewer.is_coordinator:
+        return get_object_or_404(User, pk=student_id, role="student")
+    if viewer.is_supervisor:
+        return get_object_or_404(User, pk=student_id, role="student", supervisor=viewer)
+    if allow_self and viewer.is_student and viewer.pk == student_id:
+        return viewer
+    raise PermissionDenied
+
+
+@login_required
+def student_report(request, student_id):
+    """One page about one student, laid out to print or save as PDF and take to a meeting."""
+    student = student_for(request.user, student_id, allow_self=True)
+    history = list(student.risk_scores.order_by("scored_on").values_list("scored_on", "score"))
+    # the chart is drawn as a plain line, so it prints the same on every printer
+    width, height = 640, 120
+    step = width / (len(history) - 1) if len(history) > 1 else 0
+    points = " ".join(f"{round(i * step, 1)},{round(height - score * height / 100, 1)}" for i, (_, score) in enumerate(history))
+    return render(request, "progress/report.html", {
+        "student": student,
+        "rows": timeline_for(student),
+        "meetings": student.meetings.prefetch_related("actions"),
+        "feedback": student.feedback_received.select_related("supervisor"),
+        "risk": student.risk_scores.first(),
+        "chart": {"points": points, "width": width, "height": height,
+                  "first": history[0][0] if history else None, "last": history[-1][0] if history else None},
+        "printed_on": timezone.localdate(),
+        "back": "student_home" if request.user.is_student else "student_detail",
+    })
+
+
 @login_required
 def student_detail(request, student_id):
     """One student's full picture.
@@ -73,12 +110,7 @@ def student_detail(request, student_id):
     The student's own supervisor sees it and can leave feedback. The coordinator sees it for any
     student, read only. Students and other supervisors get a 404, so they cannot even tell the page exists.
     """
-    if request.user.is_coordinator:
-        student = get_object_or_404(User, pk=student_id, role="student")
-    elif request.user.is_supervisor:
-        student = get_object_or_404(User, pk=student_id, role="student", supervisor=request.user)
-    else:
-        raise PermissionDenied
+    student = student_for(request.user, student_id)
     can_write = request.user == student.supervisor
     form = FeedbackForm(request.POST or None) if can_write else None
     if request.method == "POST":
