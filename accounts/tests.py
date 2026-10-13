@@ -115,3 +115,52 @@ class PasswordTests(TestCase):
         response = self.client.post(reverse("password_reset"), {"email": "nobody@example.com"}, follow=True)
         self.assertContains(response, "Check your email")
         self.assertEqual(len(mail.outbox), 0)
+
+
+class ImportPeopleTests(TestCase):
+    """The coordinator loads a cohort from a csv file."""
+
+    def setUp(self):
+        from django.urls import reverse
+        self.url = reverse("import_people")
+        User.objects.create_user("coord", role="coordinator", password="x")
+        self.client.login(username="coord", password="x")
+
+    def upload(self, text, password="first-pass-2026"):
+        from django.core.files.uploadedfile import SimpleUploadedFile
+        return self.client.post(self.url, {"file": SimpleUploadedFile("people.csv", text.encode()), "first_password": password})
+
+    def test_creates_supervisors_then_students_and_links_them(self):
+        response = self.upload("username,first_name,last_name,role,student_id,section,supervisor\n"
+                               "202300101,Khalid,Jasim,student,202300101,8,dr.salem\n"     # the student comes first on purpose
+                               "dr.salem,Huda,Salem,supervisor,,,\n")
+        self.assertEqual(response.context["result"]["counts"], {"student": 1, "supervisor": 1, "coordinator": 0})
+        student = User.objects.get(username="202300101")
+        self.assertEqual(student.supervisor.username, "dr.salem")
+        self.assertTrue(student.must_change_password and student.check_password("first-pass-2026"))
+
+    def test_someone_who_already_has_an_account_is_left_alone(self):
+        User.objects.create_user("dr.salem", role="supervisor", password="their-own-123", first_name="Huda")
+        response = self.upload("username,role,first_name\ndr.salem,supervisor,Changed\nnew.one,supervisor,New\n")
+        self.assertEqual(response.context["result"]["skipped"], ["dr.salem"])
+        existing = User.objects.get(username="dr.salem")
+        self.assertTrue(existing.first_name == "Huda" and existing.check_password("their-own-123"))
+        self.assertTrue(User.objects.filter(username="new.one").exists())
+
+    def test_one_bad_line_means_nothing_is_added(self):
+        response = self.upload("username,role,supervisor\ngood.one,supervisor,\nbad.one,teacher,\nlost.one,student,nobody\n")
+        self.assertContains(response, "Nothing was added")
+        self.assertContains(response, "Line 3: the role of bad.one must be student, supervisor or coordinator.")
+        self.assertContains(response, "Line 4: the supervisor nobody is not an account and is not in the file.")
+        self.assertFalse(User.objects.filter(username="good.one").exists())
+
+    def test_file_without_the_required_columns_is_refused(self):
+        response = self.upload("name,job\nKhalid,student\n")
+        self.assertContains(response, "Missing: username, role.")
+
+    def test_only_the_coordinator_can_add_people(self):
+        from django.urls import reverse
+        User.objects.create_user("sup", role="supervisor", password="x")
+        self.client.login(username="sup", password="x")
+        self.assertEqual(self.client.get(self.url).status_code, 403)
+        self.assertEqual(self.client.get(reverse("import_example")).status_code, 403)

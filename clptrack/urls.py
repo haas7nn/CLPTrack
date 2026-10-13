@@ -7,7 +7,7 @@
 from django.contrib import admin
 from django.urls import include, path
 
-from accounts.views import ChangePassword, ResetConfirm
+from accounts.views import ChangePassword, ResetConfirm, import_example, import_people
 
 # the back office carries our name instead of the default one
 admin.site.site_header = "CLPTrack admin"
@@ -20,6 +20,8 @@ urlpatterns = [
     path("accounts/password_change/", ChangePassword.as_view(), name="password_change"),
     path("accounts/reset/<uidb64>/<token>/", ResetConfirm.as_view(), name="password_reset_confirm"),
     path("accounts/", include("django.contrib.auth.urls")),
+    path("people/add/", import_people, name="import_people"),
+    path("people/example.csv", import_example, name="import_example"),
     path("", include("dashboard.urls")),
     path("", include("progress.urls")),
     path("", include("risk.urls")),

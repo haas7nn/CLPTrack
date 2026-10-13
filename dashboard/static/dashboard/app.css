@@ -136,3 +136,7 @@ h3.section-title { font-size: 1.05rem; font-weight: 700; margin: 0 0 0.75rem; }
 .narrow-form input[type=password], .narrow-form input[type=email] { width: 100%; padding: 0.5rem 0.75rem; border: 1px solid #d9e0ea; border-radius: 8px; }
 .narrow-form ul { color: var(--muted); font-size: 0.85rem; padding-left: 1.1rem; margin: 0.4rem 0 0; }
 .narrow-form .errorlist { color: #b3312a; list-style: none; padding: 0; }
+
+/* the example file on the Add people page */
+pre.example { background: #f5f7fb; border: 1px solid #e6eaf0; border-radius: 8px; padding: 0.8rem 1rem; font-size: 0.8rem; overflow-x: auto; }
+.narrow-form input[type=text] { width: 100%; padding: 0.5rem 0.75rem; border: 1px solid #d9e0ea; border-radius: 8px; }
