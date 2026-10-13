@@ -119,3 +119,11 @@ h3.section-title { font-size: 1.05rem; font-weight: 700; margin: 0 0 0.75rem; }
 .check-waiting { background: #eef1f6; color: #4c5a73; }
 .check-confirmed { background: #e3f4ea; color: #1f7a45; }
 .check-rejected { background: #fbe6e4; color: #b3312a; }
+
+/* the score settings page */
+.setting { display: flex; justify-content: space-between; align-items: center; gap: 1rem; padding: 0.55rem 0; border-bottom: 1px solid #eef1f6; }
+.setting label { margin: 0; }
+.setting label b { display: block; font-weight: 600; }
+.setting label span { color: var(--muted); font-size: 0.85rem; }
+.setting input { width: 84px; padding: 0.4rem 0.6rem; border: 1px solid #d9e0ea; border-radius: 8px; text-align: right; font-weight: 600; }
+.row-changed td { background: #fff8ee; }

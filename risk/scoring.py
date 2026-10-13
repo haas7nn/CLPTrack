@@ -31,11 +31,23 @@ SUPERVISION_CAP_DAYS = 14
 PROXIMITY_WINDOW_DAYS = 7
 
 
+def saved_settings():
+    """The row the coordinator saved on the score settings page, or None if they never did."""
+    from .models import ScoreSettings
+    return ScoreSettings.objects.first()
+
+
 def weights():
+    saved = saved_settings()
+    if saved:
+        return saved.weights()
     return getattr(settings, "RISK_WEIGHTS", DEFAULT_WEIGHTS)
 
 
 def thresholds():
+    saved = saved_settings()
+    if saved:
+        return saved.amber_from, saved.red_from
     return getattr(settings, "RISK_AMBER_FROM", 30), getattr(settings, "RISK_RED_FROM", 60)
 
 
@@ -98,8 +110,8 @@ def actions_indicator(student):
     return clamp(actions.filter(done=False).count() / total)
 
 
-def status_for(score):
-    amber_from, red_from = thresholds()
+def status_for(score, cutoffs=None):
+    amber_from, red_from = cutoffs or thresholds()
     if score >= red_from:
         return "red"
     if score >= amber_from:
@@ -107,8 +119,11 @@ def status_for(score):
     return "green"
 
 
-def compute(student, now=None):
-    """Works out the score for one student and says what each sign contributed."""
+def compute(student, now=None, use_weights=None, cutoffs=None):
+    """Works out the score for one student and says what each sign contributed.
+
+    use_weights and cutoffs are only given by the what if preview, to try values without saving them.
+    """
     now = now or timezone.now()
     today = now.date()
     values = {
@@ -118,8 +133,8 @@ def compute(student, now=None):
         "proximity": proximity_indicator(student, now),
         "actions": actions_indicator(student),
     }
-    w = weights()
+    w = use_weights or weights()
     breakdown = {name: {"value": round(value, 2), "weight": w[name], "points": round(value * w[name], 1)}
                  for name, value in values.items()}
     score = round(sum(part["points"] for part in breakdown.values()))
-    return {"score": score, "status": status_for(score), "breakdown": breakdown}
+    return {"score": score, "status": status_for(score, cutoffs), "breakdown": breakdown}

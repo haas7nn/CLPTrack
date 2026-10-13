@@ -85,3 +85,65 @@ class TestEmailUrlTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(len(mail.outbox), 1)
         self.assertEqual(mail.outbox[0].to, ["me@example.com"])
+
+
+class ScoreSettingsTests(TestCase):
+    """The page where the coordinator changes the weights and tries them first."""
+
+    def setUp(self):
+        from accounts.models import User
+        from progress.models import Deliverable
+        from datetime import timedelta
+        from django.utils import timezone
+        self.coordinator = User.objects.create_user("coord", role="coordinator", password="x")
+        self.student = User.objects.create_user("stu", role="student", password="x", first_name="Zahra", last_name="Mahmood")
+        # one deliverable already due with nothing handed in, so the overdue indicator is at its worst
+        Deliverable.objects.create(title="Reflection 1", order=1, due_at=timezone.now() - timedelta(days=2))
+        self.values = {"overdue": 35, "lateness": 20, "supervision": 25, "proximity": 10, "actions": 10,
+                       "amber_from": 30, "red_from": 60}
+        self.client.login(username="coord", password="x")
+
+    def test_only_the_coordinator_can_open_it(self):
+        from django.urls import reverse
+        self.assertEqual(self.client.get(reverse("score_settings")).status_code, 200)
+        self.client.login(username="stu", password="x")
+        self.assertEqual(self.client.get(reverse("score_settings")).status_code, 403)
+
+    def test_weights_must_add_up_to_100(self):
+        from django.urls import reverse
+        from risk.models import ScoreSettings
+        response = self.client.post(reverse("score_settings"), dict(self.values, overdue=50, save="1"))
+        self.assertContains(response, "must add up to 100")
+        self.assertEqual(ScoreSettings.objects.count(), 0)
+
+    def test_preview_shows_who_would_change_and_saves_nothing(self):
+        from django.urls import reverse
+        from risk.models import ScoreSettings
+        tried = dict(self.values, overdue=10, lateness=45, preview="1")   # make missing work matter much less
+        response = self.client.post(reverse("score_settings"), tried)
+        row = response.context["preview"]["rows"][0]
+        self.assertGreater(row["now"]["score"], row["new"]["score"])
+        self.assertEqual(response.context["preview"]["changed"], 1)
+        self.assertContains(response, "would change colour")
+        self.assertEqual(ScoreSettings.objects.count(), 0)
+
+    def test_saving_changes_the_score_and_scores_everyone_again(self):
+        from django.urls import reverse
+        from risk import scoring
+        from risk.models import RiskScore, ScoreSettings
+        before = scoring.compute(self.student)["score"]
+        response = self.client.post(reverse("score_settings"), dict(self.values, overdue=10, lateness=45, save="1"))
+        self.assertRedirects(response, reverse("score_settings"))
+        saved = ScoreSettings.objects.get()
+        self.assertEqual((saved.overdue, saved.updated_by), (10, self.coordinator))
+        self.assertLess(scoring.compute(self.student)["score"], before)
+        self.assertEqual(RiskScore.objects.filter(student=self.student).count(), 1)   # scored again straight away
+
+    def test_the_wording_under_the_score_follows_the_cut_off_points(self):
+        from django.urls import reverse
+        from risk.models import RiskScore, ScoreSettings
+        from django.utils import timezone
+        ScoreSettings.objects.create(amber_from=25, red_from=50)
+        RiskScore.objects.create(student=self.student, scored_on=timezone.localdate(), score=10, status="green", breakdown={})
+        self.client.login(username="stu", password="x")
+        self.assertContains(self.client.get(reverse("student_home")), "Below 25 green, 25 to 49 amber, 50 and above red.")

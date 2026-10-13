@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block title %}Score settings, CLPTrack{% endblock %}
+{% block content %}
+<h1 class="page-title mb-1">Score settings</h1>
+<p class="muted mb-4">The score adds five indicators, each worth a share of 100. Try new values with Preview before you save them.</p>
+
+<form method="post">{% csrf_token %}
+<div class="row g-4">
+  <div class="col-lg-5">
+    <div class="card"><div class="card-body p-4">
+      <h2 class="section-title">The five weights</h2>
+      {% if form.non_field_errors %}<div class="alert alert-danger py-2">{{ form.non_field_errors.0 }}</div>{% endif %}
+      <div class="setting"><label for="id_overdue"><b>Work overdue</b><span>share of due deliverables with nothing handed in</span></label>{{ form.overdue }}</div>
+      <div class="setting"><label for="id_lateness"><b>Work handed in late</b><span>average delay, counted up to seven days</span></label>{{ form.lateness }}</div>
+      <div class="setting"><label for="id_supervision"><b>No recent meeting</b><span>days since the last meeting beyond one week</span></label>{{ form.supervision }}</div>
+      <div class="setting"><label for="id_proximity"><b>Deadline close</b><span>due within seven days and nothing uploaded</span></label>{{ form.proximity }}</div>
+      <div class="setting"><label for="id_actions"><b>Open actions</b><span>share of agreed actions not ticked off</span></label>{{ form.actions }}</div>
+      <div class="muted small mt-2">The five must add up to 100.</div>
+
+      <h2 class="section-title mt-4">Where the colours change</h2>
+      <div class="setting"><label for="id_amber_from"><b>Amber starts at</b><span>below this a student is green</span></label>{{ form.amber_from }}</div>
+      <div class="setting"><label for="id_red_from"><b>Red starts at</b><span>from this score a student is at risk</span></label>{{ form.red_from }}</div>
+
+      <div class="d-flex gap-2 mt-4">
+        <button class="btn btn-outline-navy" name="preview" value="1">Preview</button>
+        <button class="btn btn-navy" name="save" value="1">Save and score everyone again</button>
+      </div>
+      {% if saved.pk %}<div class="muted small mt-3">Last saved {{ saved.updated_at|date:"j F Y, H:i" }}{% if saved.updated_by %} by {{ saved.updated_by.get_full_name|default:saved.updated_by.username }}{% endif %}.</div>
+      {% else %}<div class="muted small mt-3">These are the starting values. Nothing has been changed yet.</div>{% endif %}
+    </div></div>
+  </div>
+
+  <div class="col-lg-7">
+    {% if preview %}
+    <div class="card table-card">
+      <div class="p-4 pb-2">
+        <h2 class="section-title mb-1">What would change</h2>
+        <div class="muted">{% if preview.changed %}<b class="text-danger">{{ preview.changed }}</b> student{{ preview.changed|pluralize }} would change colour.{% else %}Nobody would change colour.{% endif %}
+          With these values: {{ preview.counts.green }} green, {{ preview.counts.amber }} amber, {{ preview.counts.red }} red. Nothing is saved yet.</div>
+      </div>
+      <table class="table">
+        <thead><tr><th class="ps-4">Student</th><th>Now</th><th>With these values</th><th class="pe-4"></th></tr></thead>
+        <tbody>
+        {% for r in preview.rows %}
+        <tr class="{% if r.changed %}row-changed{% endif %}">
+          <td class="ps-4 fw-semibold">{{ r.user.get_full_name|default:r.user.username }}</td>
+          <td><span class="status status-{{ r.now.status }}">{{ r.now.status|capfirst }} {{ r.now.score }}</span></td>
+          <td><span class="status status-{{ r.new.status }}">{{ r.new.status|capfirst }} {{ r.new.score }}</span></td>
+          <td class="pe-4 small">{% if r.changed %}<b>changes colour</b>{% else %}<span class="muted">same colour</span>{% endif %}</td>
+        </tr>
+        {% empty %}<tr><td colspan="4" class="muted ps-4">There are no students yet.</td></tr>{% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="card"><div class="card-body p-4">
+      <h2 class="section-title">How to use this page</h2>
+      <p>Change any value on the left and click <b>Preview</b>. You will see every student's score now and with your values, and who would change colour. Nothing is saved until you click Save.</p>
+      <p class="mb-0 muted">Why these starting values: missing work is the strongest sign that a student is in trouble, so it has the largest share. A long gap between meetings comes next, because the course makes a weekly meeting mandatory. The other three are earlier and weaker signals.</p>
+    </div></div>
+    {% endif %}
+  </div>
+</div>
+</form>
+{% endblock %}
