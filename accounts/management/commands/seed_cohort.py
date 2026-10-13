@@ -116,7 +116,7 @@ class Command(BaseCommand):
                                                       data=b"%PDF-1.4", note=note, submitted_at=day)
                     elif kind == "meeting":
                         discussed, actions, done_later = detail
-                        m = Meeting.objects.create(student=student, held_on=day.date(), discussed=discussed)
+                        m = Meeting.objects.create(student=student, held_on=timezone.localdate(day), discussed=discussed)
                         rows = [Action.objects.create(meeting=m, description=a) for a in actions]
                         for idx, done_back in done_later:
                             rows[idx].done = True
@@ -126,7 +126,7 @@ class Command(BaseCommand):
                         Feedback.objects.create(supervisor=supervisor, student=student, text=detail, created_at=day)
             for student in students.values():
                 result = compute(student, now=day)
-                RiskScore.objects.update_or_create(student=student, scored_on=day.date(), defaults={
+                RiskScore.objects.update_or_create(student=student, scored_on=timezone.localdate(day), defaults={
                     "score": result["score"], "status": result["status"], "breakdown": result["breakdown"]})
 
         self.stdout.write(f"development cohort ready: {len(students)} students, {days + 1} days of scores")

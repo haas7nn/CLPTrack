@@ -54,3 +54,15 @@ coordinator can change that on the score settings page, and the preview shows wh
 
 The cohort page still asks the database several questions per student. It is fine for a class and would
 need one query per table at the size of the whole programme.
+
+## Added on 14 October
+
+A file with an Arabic name now downloads with its name, and the type sent to the browser comes from the
+file name and not from what was claimed at upload. The database itself now refuses a second row for the
+same student and deliverable. A superuser made on the command line is a coordinator, not a student.
+Saving new weights sends the alert for any colour that changed. Reminders use wide windows, two to four
+days and under two days, so a missed day sends a reminder late and not never.
+
+One more thing the review taught: two of my own tests took the date in UTC. They passed all day and
+failed between midnight and three in the morning in Bahrain, when the UTC date is still yesterday. They
+now use the local date, the same as the code. 86 tests.

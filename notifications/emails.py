@@ -36,17 +36,24 @@ def _send(kind, user, subject, body, reference):
 
 
 def send_deadline_reminders(now=None):
-    """Remind every student about each deadline that is 3 or 1 days away with nothing uploaded."""
+    """Remind every student about each deadline that is about 3 days or 1 day away with nothing uploaded.
+
+    The three day reminder goes out when the deadline is between 2 and 4 days away, the one day reminder
+    when it is less than 2 days away. The wide windows mean a reminder is still sent, a day late, if the
+    job missed a day. The reference stops either one going twice.
+    """
     now = now or timezone.now()
     sent = 0
+    windows = {3: (timedelta(days=2), timedelta(days=4)), 1: (timedelta(0), timedelta(days=2))}
     for days in REMIND_DAYS_BEFORE:
-        window_start = now + timedelta(days=days)
-        window_end = window_start + timedelta(days=1)
-        for deliverable in Deliverable.objects.filter(due_at__gte=window_start, due_at__lt=window_end):
+        window_start, window_end = now + windows[days][0], now + windows[days][1]
+        for deliverable in Deliverable.objects.filter(due_at__gt=window_start, due_at__lte=window_end):
+            left = (deliverable.due_at - now).days
+            when = "today" if left == 0 else f"in {left} day{'s' if left != 1 else ''}"
             for student in User.objects.filter(role=User.Role.STUDENT):
                 if Submission.objects.filter(student=student, deliverable=deliverable).exists():
                     continue
-                subject = f"CLPTrack reminder: {deliverable.title} is due in {days} day{'s' if days > 1 else ''}"
+                subject = f"CLPTrack reminder: {deliverable.title} is due {when}"
                 body = (f"Hi {student.first_name or student.username},\n\n"
                         f"{deliverable.title} is due on {timezone.localtime(deliverable.due_at):%A %d %B at %H:%M} "
                         f"and you have not uploaded anything for it yet.\n\nCLPTrack")

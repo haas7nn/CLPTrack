@@ -3,12 +3,21 @@
 One table for all of them. The role field says if someone is a student, a supervisor
 or a coordinator, and a student also points at their supervisor.
 """
-from django.contrib.auth.models import AbstractUser
+from django.contrib.auth.models import AbstractUser, UserManager as DjangoUserManager
 from django.db import models
+
+
+class UserManager(DjangoUserManager):
+    def create_superuser(self, username, email=None, password=None, **extra_fields):
+        """Someone who can do everything is a coordinator, so they are not scored like a student."""
+        extra_fields.setdefault("role", "coordinator")
+        return super().create_superuser(username, email, password, **extra_fields)
 
 
 class User(AbstractUser):
     """One person. Student, supervisor or coordinator."""
+
+    objects = UserManager()
 
     class Role(models.TextChoices):
         STUDENT = "student", "Student"

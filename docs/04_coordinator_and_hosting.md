@@ -24,7 +24,7 @@ defaults apply and nothing changes for development.
 | `ALLOWED_HOSTS` | 127.0.0.1, localhost | the site's domain |
 | `CSRF_TRUSTED_ORIGINS` | empty | https:// plus the domain |
 | `DATABASE_URL` | SQLite file | the PostgreSQL address |
-| `EMAIL_HOST` and friends | unset, emails print to the console | the SMTP server |
+| `BREVO_API_KEY` | unset, emails print to the console | the mail provider's key, emails go over HTTPS |
 
 `.env.example` lists them all with placeholder values. The real `.env` is never committed.
 
@@ -48,8 +48,9 @@ When `DEBUG` is off, the settings also switch on HTTPS only cookies and a redire
 * **Why SQLite on the laptop and PostgreSQL on the host?** SQLite needs no setup, which keeps development
   simple. PostgreSQL is what hosts provide and handles several users at the same time safely. Django hides
   the difference, the models and queries are identical.
-* **How do the daily emails run on the host?** The host's scheduler runs `python manage.py run_daily` once a
-  day, which scores every student and then sends reminders and alerts.
+* **How do the daily emails run on the host?** The free host has no scheduler, so a GitHub workflow posts
+  to `/tasks/daily/` with a secret token every morning. The view runs `run_daily`, which scores every
+  student and then sends reminders and alerts.
 
 ## Commands you should be able to run
 

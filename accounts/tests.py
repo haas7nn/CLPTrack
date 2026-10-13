@@ -196,3 +196,9 @@ class ImportPeopleTests(TestCase):
         self.client.login(username="sup", password="x")
         self.assertEqual(self.client.get(self.url).status_code, 403)
         self.assertEqual(self.client.get(reverse("import_example")).status_code, 403)
+
+
+class SuperuserRoleTests(TestCase):
+    def test_a_superuser_made_on_the_command_line_is_a_coordinator(self):
+        admin = User.objects.create_superuser("root", "root@example.com", "a-long-password-1")
+        self.assertEqual(admin.role, "coordinator")

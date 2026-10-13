@@ -29,7 +29,7 @@ class RiskScoreTests(TestCase):
                                       filename="a.pdf", data=b"x",
                                       submitted_at=d.due_at + 3 * day)  # three days late each
         # last meeting 16 days ago, with four actions, two still open
-        meeting = Meeting.objects.create(student=self.student, held_on=(now - 16 * day).date(), discussed="plan")
+        meeting = Meeting.objects.create(student=self.student, held_on=timezone.localdate(now - 16 * day), discussed="plan")
         for i in range(4):
             Action.objects.create(meeting=meeting, description=f"task {i}", done=(i < 2))
         # next deadline in exactly three days with nothing uploaded

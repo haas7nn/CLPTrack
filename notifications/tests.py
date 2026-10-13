@@ -106,3 +106,21 @@ class OneBadAddressTests(TestCase):
         self.assertEqual(sent, 2)
         self.assertEqual(sorted(m.to[0] for m in mail.outbox), ["first@example.com", "last@example.com"])
         self.assertFalse(NotificationLog.objects.filter(recipient__username="broken").exists())   # so it is tried again tomorrow
+
+
+class ReminderWindowTests(TestCase):
+    def test_a_reminder_still_goes_out_if_the_job_missed_a_day(self):
+        from datetime import timedelta
+        from django.core import mail
+        from django.utils import timezone
+        from accounts.models import User
+        from notifications import emails
+        from progress.models import Deliverable
+        now = timezone.now()
+        Deliverable.objects.create(title="Reflection 3", order=1, due_at=now + timedelta(days=2, hours=5))
+        User.objects.create_user("stu", role="student", password="x", email="stu@example.com")
+        self.assertEqual(emails.send_deadline_reminders(now), 1)      # the three day reminder, a day late
+        self.assertIn("is due in 2 days", mail.outbox[0].subject)
+        self.assertEqual(emails.send_deadline_reminders(now), 0)      # and never twice
+        self.assertEqual(emails.send_deadline_reminders(now + timedelta(days=1, hours=6)), 1)   # then the one day reminder
+        self.assertIn("is due today", mail.outbox[1].subject)

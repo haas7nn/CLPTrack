@@ -75,8 +75,8 @@ class CohortStatisticsTests(TestCase):
         # Mona handed in one day late and met her supervisor this week, Faris did neither
         Submission.objects.create(student=self.good, deliverable=self.past, filename="r1.pdf",
                                   submitted_at=self.now - timedelta(days=3, hours=12))
-        Meeting.objects.create(student=self.good, held_on=self.now.date() - timedelta(days=2), discussed="x")
-        today = self.now.date()
+        Meeting.objects.create(student=self.good, held_on=timezone.localdate(self.now) - timedelta(days=2), discussed="x")
+        today = timezone.localdate(self.now)   # the date in Bahrain, the one the site uses
         RiskScore.objects.create(student=self.good, scored_on=today, score=6, status="green",
                                  breakdown={"overdue": {"value": 0, "weight": 35, "points": 0.0},
                                             "lateness": {"value": 0.14, "weight": 20, "points": 2.9}})
@@ -179,7 +179,7 @@ class NextStepsTests(TestCase):
         now = timezone.now()
         Deliverable.objects.create(title="Reflection 1", order=1, due_at=now - timedelta(days=3))
         Deliverable.objects.create(title="Proposal", order=2, due_at=now + timedelta(days=4))
-        m = Meeting.objects.create(student=stu, held_on=(now - timedelta(days=12)).date(), discussed="x")
+        m = Meeting.objects.create(student=stu, held_on=timezone.localdate(now - timedelta(days=12)), discussed="x")
         Action.objects.create(meeting=m, description="do it")
         steps = [s["text"] for s in next_steps(stu, timeline_for(stu, now), now)]
         self.assertIn("Upload Reflection 1, it is 3 days overdue", steps)

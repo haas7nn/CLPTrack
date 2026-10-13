@@ -37,15 +37,17 @@ Written 6 October 2026. Read with walkthroughs 1 and 2.
 ## What the emails look like
 
 While developing, emails are not really sent. Django prints them to the terminal where the server is
-running, which is enough to check the wording. On the real host, the MAILERS setting in `settings.py`
-will point at an SMTP service instead, with no code changes.
+running, which is enough to check the wording. On the real host the same setting points at a small
+backend that posts each message to the mail provider over HTTPS, because the host blocks mail ports
+(walkthrough 6).
 
 ## Questions an examiner might ask
 
 * **What stops the system emailing a student every day about the same deadline?** The notification log
   and the reference text. One reminder at 3 days, one at 1 day, never more.
-* **What if the daily job does not run one day?** Nothing breaks. The next run scores that day. The
-  missing day simply has no row in the history, which the chart shows as a gap.
+* **What if the daily job does not run one day?** The next run scores as normal, and the missing day has
+  no row in the history. Reminders have wide windows for this reason: the three day reminder goes out
+  when a deadline is two to four days away, so a missed day sends it a day late and not never.
 * **Why does the supervisor only get an email when the colour changes?** A daily email for every student
   would be ignored. A change of colour is the moment that needs attention.
 * **How do you know the formula is right?** The worked example test checks every indicator and the total,

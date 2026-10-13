@@ -17,6 +17,7 @@ from django.views.decorators.http import require_POST
 
 from accounts.models import User
 from dashboard.views import role_required
+from notifications.emails import send_status_alerts
 from . import scoring
 from .forms import ScoreSettingsForm
 from .models import ScoreSettings
@@ -82,6 +83,7 @@ def score_settings(request):
             row.updated_by = request.user
             row.save()
             call_command("score_students")
+            send_status_alerts()   # a colour that changed because of the new weights is still a change
             messages.success(request, "The new settings are saved and every student was scored again.")
             return redirect("score_settings")
         preview = what_if(form.cleaned_data)

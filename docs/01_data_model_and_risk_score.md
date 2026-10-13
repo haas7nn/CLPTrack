@@ -13,10 +13,13 @@ the system.
 | `accounts` | The User table and the roles | Done |
 | `progress` | Deliverables, submissions, meetings, actions, feedback | Done |
 | `risk` | The risk score and its history | Done, formula and tests |
-| `notifications` | Reminder and alert emails | Empty for now |
-| `dashboard` | The pages people see | Empty for now |
+| `notifications` | Reminder and alert emails | Built, see walkthrough 3 |
+| `dashboard` | The pages people see | Built, see walkthroughs 2 and 8 |
 
-## The seven tables
+## The tables
+
+This note was written when there were seven. There are nine now: NotificationLog was added with the
+emails (walkthrough 3) and ScoreSettings with the score settings page (walkthrough 10).
 
 Each table is a Python class in a `models.py` file. Django turns the class into a database table. The
 class diagram for the thesis is these seven boxes and the arrows between them.
@@ -54,9 +57,9 @@ Five indicators, each turned into a number between 0 and 1, where 0 is no concer
 
 Then: score = sum of (value times weight). Below 30 green, 30 to 59 amber, 60 or more red.
 
-The weights and thresholds are read from `settings.py` if they are set there (`RISK_WEIGHTS`,
-`RISK_AMBER_FROM`, `RISK_RED_FROM`), otherwise the defaults in `scoring.py` are used. That is what "stored as
-settings" in the proposal means: they can be changed without touching the formula.
+The weights and thresholds come from the row the coordinator saves on the score settings page. Until
+someone saves, the starting values in `scoring.py` are used. That is what "stored as settings" in the
+proposal means: they can be changed without touching the formula.
 
 ### The worked example
 

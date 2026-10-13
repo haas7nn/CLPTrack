@@ -261,3 +261,24 @@ class ScoreFollowsTheRecordsTests(TestCase):
         self.assertLess(after.score, before)
         self.assertEqual(after.breakdown["overdue"]["points"], 0.0)
         self.assertEqual(RiskScore.objects.filter(student=student).count(), 1)   # today's row was replaced, not added
+
+
+class DownloadNameTests(TestCase):
+    def test_an_arabic_file_name_downloads_with_its_name_and_a_safe_type(self):
+        student = User.objects.create_user("stu", role="student", password="x")
+        d = Deliverable.objects.create(title="Reflection 1", order=1, due_at=timezone.now())
+        sub = Submission.objects.create(student=student, deliverable=d, filename="تقرير الأسبوع.pdf",
+                                        content_type="text/html", data=b"%PDF-1.4 x")
+        self.client.login(username="stu", password="x")
+        response = self.client.get(reverse("download", args=[sub.id]))
+        self.assertEqual(response["Content-Type"], "application/pdf")      # from the name, not from what was claimed
+        self.assertIn("attachment", response["Content-Disposition"])
+        self.assertIn("filename*=utf-8''", response["Content-Disposition"])
+
+    def test_the_database_refuses_a_second_row_for_the_same_deliverable(self):
+        from django.db import IntegrityError, transaction
+        student = User.objects.create_user("stu", role="student", password="x")
+        d = Deliverable.objects.create(title="Reflection 1", order=1, due_at=timezone.now())
+        Submission.objects.create(student=student, deliverable=d, filename="a.pdf")
+        with self.assertRaises(IntegrityError), transaction.atomic():
+            Submission.objects.create(student=student, deliverable=d, filename="b.pdf")

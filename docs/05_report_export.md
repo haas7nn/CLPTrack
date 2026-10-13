@@ -11,7 +11,7 @@ csv file named `clptrack_2026-10-06.csv` (today's date) that opens in Excel. One
 |---|---|
 | Student ID, Name, Section, Supervisor | the User table |
 | Score, Status | the latest RiskScore row, or "not scored" |
-| Submitted, Missing, Due so far | the same counts as the dashboard table |
+| Submitted, Early, Missing, Due so far | the same counts as the dashboard table |
 | Last meeting | the most recent Meeting date, or "none" |
 
 A supervisor gets their own students. The coordinator gets everyone. A student who tries the address gets

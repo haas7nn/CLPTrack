@@ -44,6 +44,10 @@ class Submission(models.Model):
 
     class Meta:
         ordering = ["-submitted_at"]
+        constraints = [
+            # a second upload replaces the first, so there is never more than one row
+            models.UniqueConstraint(fields=["student", "deliverable"], name="one_submission_per_deliverable"),
+        ]
 
     def __str__(self):
         return f"{self.student} submitted {self.deliverable}"

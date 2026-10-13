@@ -23,7 +23,7 @@ supervisor can press them, the view is `meeting_review` in `progress/views.py`. 
 ## What it does to the score
 
 One rule: a rejected meeting does not count. `Meeting.counted()` returns every meeting except the
-rejected ones, and the scoring, the dashboards and the advice card all read meetings through it. The
+rejected ones, and the meeting gap, the dashboards and the advice card read meetings through it. The
 actions agreed in a rejected meeting are dropped too.
 
 A waiting meeting still counts. That is deliberate. If only confirmed meetings counted, a supervisor

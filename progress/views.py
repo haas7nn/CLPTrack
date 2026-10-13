@@ -1,10 +1,13 @@
 """Pages for handing in work, recording meetings and leaving feedback."""
+import mimetypes
+
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
+from django.utils.http import content_disposition_header
 from django.views.decorators.http import require_POST
 
 from accounts.models import User
@@ -172,6 +175,9 @@ def download(request, submission_id):
     allowed = (user == submission.student or user == submission.student.supervisor or user.is_coordinator)
     if not allowed:
         raise PermissionDenied
-    response = HttpResponse(bytes(submission.data), content_type=submission.content_type or "application/octet-stream")
-    response["Content-Disposition"] = f'attachment; filename="{submission.filename}"'
+    # the type is worked out from the file name, not taken from whatever the browser claimed at upload
+    content_type = mimetypes.guess_type(submission.filename)[0] or "application/octet-stream"
+    response = HttpResponse(bytes(submission.data), content_type=content_type)
+    # this helper writes the header correctly for names with spaces, quotes or Arabic letters
+    response["Content-Disposition"] = content_disposition_header(True, submission.filename)
     return response
