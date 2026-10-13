@@ -127,3 +127,12 @@ h3.section-title { font-size: 1.05rem; font-weight: 700; margin: 0 0 0.75rem; }
 .setting label span { color: var(--muted); font-size: 0.85rem; }
 .setting input { width: 84px; padding: 0.4rem 0.6rem; border: 1px solid #d9e0ea; border-radius: 8px; text-align: right; font-weight: 600; }
 .row-changed td { background: #fff8ee; }
+
+/* the name in the header opens the change password page, on a phone a short link replaces it */
+.topbar a.who { text-decoration: none; }
+.topbar a.who:hover { color: #fff; text-decoration: underline; }
+.topbar .who-small { display: none; color: rgba(255, 255, 255, 0.85); font-size: 0.85rem; }
+@media (max-width: 767px) { .topbar .who-small { display: inline; } }
+.narrow-form input[type=password], .narrow-form input[type=email] { width: 100%; padding: 0.5rem 0.75rem; border: 1px solid #d9e0ea; border-radius: 8px; }
+.narrow-form ul { color: var(--muted); font-size: 0.85rem; padding-left: 1.1rem; margin: 0.4rem 0 0; }
+.narrow-form .errorlist { color: #b3312a; list-style: none; padding: 0; }

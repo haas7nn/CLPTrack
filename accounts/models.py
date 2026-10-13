@@ -24,6 +24,9 @@ class User(AbstractUser):
         help_text="The supervisor of this student, students only",
     )
 
+    # set when the coordinator gives someone a first password, cleared when they choose their own
+    must_change_password = models.BooleanField(default=False)
+
     def __str__(self):
         name = self.get_full_name() or self.username
         return f"{name} ({self.get_role_display()})"

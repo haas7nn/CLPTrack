@@ -63,3 +63,55 @@ class SharedPasswordTests(TestCase):
         with self.assertRaises(CommandError):
             call_command("shared_password", password="short")
         self.assertTrue(User.objects.get(username="student1").check_password("old-one-123"))
+
+
+class PasswordTests(TestCase):
+    """Changing a password, the first password rule, and the forgotten password email."""
+
+    def setUp(self):
+        self.user = User.objects.create_user("stu", role="student", password="first-pass-123", email="stu@example.com")
+
+    def test_user_changes_their_own_password(self):
+        from django.urls import reverse
+        self.client.login(username="stu", password="first-pass-123")
+        response = self.client.post(reverse("password_change"), {
+            "old_password": "first-pass-123", "new_password1": "my-own-choice-789", "new_password2": "my-own-choice-789"})
+        self.assertRedirects(response, reverse("home"), fetch_redirect_response=False)
+        self.user.refresh_from_db()
+        self.assertTrue(self.user.check_password("my-own-choice-789"))
+
+    def test_first_password_must_be_changed_before_anything_else(self):
+        from django.urls import reverse
+        self.user.must_change_password = True
+        self.user.save()
+        self.client.login(username="stu", password="first-pass-123")
+        self.assertRedirects(self.client.get(reverse("student_home")), reverse("password_change"))
+        self.assertContains(self.client.get(reverse("password_change")), "You were given a first password")
+        self.client.post(reverse("password_change"), {
+            "old_password": "first-pass-123", "new_password1": "my-own-choice-789", "new_password2": "my-own-choice-789"})
+        self.user.refresh_from_db()
+        self.assertFalse(self.user.must_change_password)
+        self.assertEqual(self.client.get(reverse("student_home")).status_code, 200)   # now the site opens
+
+    def test_forgotten_password_sends_a_link_that_works_once(self):
+        import re
+        from django.core import mail
+        from django.urls import reverse
+        self.assertContains(self.client.get(reverse("login")), "Forgot your password?")
+        self.client.post(reverse("password_reset"), {"email": "stu@example.com"})
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertIn("Your username is stu", mail.outbox[0].body)
+        link = re.search(r"https?://[^\s]+(/accounts/reset/[^\s]+)", mail.outbox[0].body).group(1)
+        form_page = self.client.get(link, follow=True)
+        self.assertContains(form_page, "Choose a new password")
+        self.client.post(form_page.request["PATH_INFO"], {"new_password1": "brand-new-one-456", "new_password2": "brand-new-one-456"})
+        self.user.refresh_from_db()
+        self.assertTrue(self.user.check_password("brand-new-one-456"))
+        self.assertContains(self.client.get(link, follow=True), "already used or is too old")
+
+    def test_unknown_email_gets_the_same_answer_and_no_email(self):
+        from django.core import mail
+        from django.urls import reverse
+        response = self.client.post(reverse("password_reset"), {"email": "nobody@example.com"}, follow=True)
+        self.assertContains(response, "Check your email")
+        self.assertEqual(len(mail.outbox), 0)
