@@ -47,7 +47,7 @@ The admin site is at http://127.0.0.1:8000/admin
 
     .venv/bin/python manage.py test
 
-87 tests, about forty five seconds. They cover each indicator and the worked example, the access rule of
+93 tests, about fifty seconds. They cover each indicator and the worked example, the access rule of
 every page, uploads, meetings and their confirmation, emails never sent twice, the cohort statistics,
 score settings, passwords, loading people from a file and the printable report.
 
