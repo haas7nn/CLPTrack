@@ -39,12 +39,15 @@
   <div class="col-lg-7">
     <div class="card h-100"><div class="card-body p-4">
       <h2 class="section-title">Students who need attention</h2>
+      {% if totals.stuck %}<p class="small text-danger mb-2">{{ totals.stuck }} red for two weeks or more, listed first.</p>{% endif %}
       {% for s in attention %}
       <div class="d-flex justify-content-between align-items-center gap-3 py-2 border-bottom-light">
         <div>
           <a class="fw-semibold text-decoration-none" href="{% url 'student_detail' s.user.id %}">{{ s.user.get_full_name|default:s.user.username }}</a>
           <span class="muted small ms-1">{{ s.supervisor_name }}</span>
           {% if s.reason %}<div class="muted small">Main reason: {{ s.reason }}</div>{% endif %}
+          {% if s.stuck %}<div class="small fw-semibold text-danger">Red for {{ s.red_days }} days, follow up with the supervisor</div>
+          {% elif s.red_days > 1 %}<div class="muted small">Red for {{ s.red_days }} days</div>{% endif %}
         </div>
         <div class="text-nowrap">
           <span class="status status-{{ s.risk.status }}">{{ s.risk.get_status_display }} {{ s.risk.score }}</span>

@@ -107,6 +107,8 @@ class Feedback(models.Model):
     meeting = models.ForeignKey(Meeting, null=True, blank=True, on_delete=models.SET_NULL, related_name="feedback")
     text = models.TextField()
     created_at = models.DateTimeField(auto_now_add=True)
+    # the student marks a comment as addressed once they have acted on it, empty means still pending
+    addressed_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         ordering = ["-created_at"]

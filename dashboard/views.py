@@ -181,6 +181,20 @@ INDICATOR_WORDS = {
 }
 
 
+# a student red for this many days in a row is flagged to the coordinator, the supervisor alone has not moved them
+STUCK_DAYS = 14
+
+
+def red_days(student, today):
+    """How many days the student has been red without a break, counted back from their latest score."""
+    start = None
+    for scored_on, status in student.risk_scores.order_by("-scored_on").values_list("scored_on", "status"):
+        if status != "red":
+            break
+        start = scored_on
+    return (today - start).days + 1 if start else 0
+
+
 def main_reason(risk):
     """The indicator that added the most points to a score, in plain words."""
     if not risk or not risk.breakdown:
@@ -284,10 +298,15 @@ def coordinator_home(request):
     totals["supervisors"] = len(supervisors)
 
     # amber and red students, worst first, each with the main reason for their score
-    attention = sorted((row for row in everyone if row["risk"] and row["risk"].status != "green"),
-                       key=lambda row: -row["risk"].score)
+    today = timezone.localdate(now)
+    attention = [row for row in everyone if row["risk"] and row["risk"].status != "green"]
     for row in attention:
         row["reason"] = main_reason(row["risk"])
+        row["red_days"] = red_days(row["user"], today) if row["risk"].status == "red" else 0
+        row["stuck"] = row["red_days"] >= STUCK_DAYS
+    # the students stuck in red come first, then the rest worst score first
+    attention.sort(key=lambda row: (not row["stuck"], -row["risk"].score))
+    totals["stuck"] = sum(1 for row in attention if row["stuck"])
 
     return render(request, "dashboard/coordinator_home.html", {
         "groups": groups, "totals": totals, "attention": attention,

@@ -208,3 +208,41 @@ class ProgressBarTests(TestCase):
         self.assertContains(page, "1 of 4 handed in, 25%")
         for state in ("ms-done", "ms-missing", "ms-soon", "ms-upcoming"):   # one block of each kind
             self.assertContains(page, f'class="ms {state}" title=')
+
+
+class StuckInRedTests(TestCase):
+    """A student red for two weeks in a row is listed first on the coordinator page."""
+
+    def setUp(self):
+        from datetime import timedelta
+        from django.utils import timezone
+        from risk.models import RiskScore
+        today = timezone.localdate()
+        User.objects.create_user("coord", role="coordinator", password="x")
+        sup = User.objects.create_user("supa", role="supervisor", password="x")
+        self.stuck = User.objects.create_user("stuck", role="student", password="x", supervisor=sup)
+        self.fresh = User.objects.create_user("fresh", role="student", password="x", supervisor=sup)
+        # stuck: amber long ago, then red every day for the last 15 days, a lower score than fresh
+        RiskScore.objects.create(student=self.stuck, scored_on=today - timedelta(days=20), score=40, status="amber", breakdown={})
+        for day in range(15):
+            RiskScore.objects.create(student=self.stuck, scored_on=today - timedelta(days=day), score=61, status="red", breakdown={})
+        # fresh: red only since yesterday, with a higher score
+        RiskScore.objects.create(student=self.fresh, scored_on=today - timedelta(days=2), score=50, status="amber", breakdown={})
+        RiskScore.objects.create(student=self.fresh, scored_on=today - timedelta(days=1), score=80, status="red", breakdown={})
+        RiskScore.objects.create(student=self.fresh, scored_on=today, score=80, status="red", breakdown={})
+        self.client.login(username="coord", password="x")
+        self.response = self.client.get(reverse("coordinator_home"))
+
+    def test_counts_the_unbroken_run_of_red_days(self):
+        from django.utils import timezone
+        from dashboard.views import red_days
+        today = timezone.localdate()
+        self.assertEqual(red_days(self.stuck, today), 15)
+        self.assertEqual(red_days(self.fresh, today), 2)
+
+    def test_stuck_student_comes_first_with_a_note(self):
+        attention = self.response.context["attention"]
+        self.assertEqual([a["user"].username for a in attention], ["stuck", "fresh"])
+        self.assertEqual(self.response.context["totals"]["stuck"], 1)
+        self.assertContains(self.response, "Red for 15 days, follow up with the supervisor")
+        self.assertContains(self.response, "1 red for two weeks or more")

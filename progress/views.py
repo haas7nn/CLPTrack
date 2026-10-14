@@ -14,7 +14,7 @@ from accounts.models import User
 from dashboard.views import progress_for, role_required, timeline_for
 from risk import scoring
 from .forms import FeedbackForm, MeetingForm, SubmissionForm
-from .models import Action, Deliverable, Meeting, Submission
+from .models import Action, Deliverable, Feedback, Meeting, Submission
 
 
 @role_required("student")
@@ -59,6 +59,17 @@ def meetings(request):
         return redirect("meetings")
     my_meetings = request.user.meetings.prefetch_related("actions")
     return render(request, "progress/meetings.html", {"form": form, "meetings": my_meetings})
+
+
+@role_required("student")
+@require_POST
+def feedback_addressed(request, feedback_id):
+    """A student marks a comment from their supervisor as addressed, so the supervisor can see it was acted on."""
+    feedback = get_object_or_404(Feedback, pk=feedback_id, student=request.user)
+    if feedback.addressed_at is None:
+        feedback.addressed_at = timezone.now()
+        feedback.save(update_fields=["addressed_at"])
+    return redirect("student_home")
 
 
 @role_required("student")

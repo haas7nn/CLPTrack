@@ -64,7 +64,8 @@
     <h2 class="section-title">Feedback from the supervisor</h2>
     {% endif %}
     {% for f in feedback %}
-    <div class="card mb-2"><div class="card-body py-3"><div class="muted small">{{ f.created_at|date:"j M Y" }}, {{ f.supervisor.get_full_name|default:f.supervisor.username }}</div>{{ f.text|linebreaksbr }}</div></div>
+    <div class="card mb-2"><div class="card-body py-3"><div class="muted small">{{ f.created_at|date:"j M Y" }}, {{ f.supervisor.get_full_name|default:f.supervisor.username }}
+      {% if f.addressed_at %}<span class="status status-green ms-2">Addressed {{ f.addressed_at|date:"j M" }}</span>{% else %}<span class="status status-amber ms-2">Pending</span>{% endif %}</div>{{ f.text|linebreaksbr }}</div></div>
     {% empty %}{% if not form %}<p class="muted">No feedback yet.</p>{% endif %}{% endfor %}
   </div>
 </div>

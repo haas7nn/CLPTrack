@@ -74,6 +74,8 @@
       <div class="py-2 border-bottom-light">
         <div class="muted small">{{ f.created_at|date:"j M Y" }}, {{ f.supervisor.get_full_name|default:f.supervisor.username }}</div>
         {{ f.text|linebreaksbr }}
+        <div class="mt-1">{% if f.addressed_at %}<span class="status status-green">Addressed {{ f.addressed_at|date:"j M" }}</span>
+        {% else %}<form method="post" action="{% url 'feedback_addressed' f.id %}" class="d-inline">{% csrf_token %}<button class="btn btn-outline-navy btn-sm py-0">Mark as addressed</button></form>{% endif %}</div>
       </div>
       {% empty %}<div class="muted">Nothing yet. Your supervisor writes it from their view of your page.</div>{% endfor %}
     </div></div>

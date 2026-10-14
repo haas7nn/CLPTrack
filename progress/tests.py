@@ -282,3 +282,38 @@ class DownloadNameTests(TestCase):
         Submission.objects.create(student=student, deliverable=d, filename="a.pdf")
         with self.assertRaises(IntegrityError), transaction.atomic():
             Submission.objects.create(student=student, deliverable=d, filename="b.pdf")
+
+
+class FeedbackAddressedTests(TestCase):
+    def setUp(self):
+        from progress.models import Feedback
+        self.supervisor = User.objects.create_user("sup", role="supervisor", password="x")
+        self.student = User.objects.create_user("stu", role="student", password="x", supervisor=self.supervisor)
+        self.other = User.objects.create_user("stu2", role="student", password="x", supervisor=self.supervisor)
+        self.feedback = Feedback.objects.create(supervisor=self.supervisor, student=self.student, text="Add the class diagram")
+
+    def test_student_marks_their_own_comment_and_the_supervisor_sees_it(self):
+        self.client.login(username="stu", password="x")
+        self.assertContains(self.client.get(reverse("student_home")), "Mark as addressed")
+        response = self.client.post(reverse("feedback_addressed", args=[self.feedback.id]))
+        self.assertRedirects(response, reverse("student_home"))
+        self.feedback.refresh_from_db()
+        self.assertIsNotNone(self.feedback.addressed_at)
+        self.client.login(username="sup", password="x")
+        self.assertContains(self.client.get(reverse("student_detail", args=[self.student.id])), "Addressed")
+
+    def test_pending_until_marked(self):
+        self.client.login(username="sup", password="x")
+        self.assertContains(self.client.get(reverse("student_detail", args=[self.student.id])), "Pending")
+
+    def test_nobody_else_can_mark_it(self):
+        self.client.login(username="stu2", password="x")
+        self.assertEqual(self.client.post(reverse("feedback_addressed", args=[self.feedback.id])).status_code, 404)
+        self.client.login(username="sup", password="x")
+        self.assertEqual(self.client.post(reverse("feedback_addressed", args=[self.feedback.id])).status_code, 403)
+        self.feedback.refresh_from_db()
+        self.assertIsNone(self.feedback.addressed_at)
+
+    def test_a_link_cannot_mark_it(self):
+        self.client.login(username="stu", password="x")
+        self.assertEqual(self.client.get(reverse("feedback_addressed", args=[self.feedback.id])).status_code, 405)
