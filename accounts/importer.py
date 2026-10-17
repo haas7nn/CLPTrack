@@ -17,6 +17,7 @@ import secrets
 
 from django.core.exceptions import ValidationError
 from django.db import transaction
+from django.utils import timezone
 
 from .models import User
 
@@ -74,7 +75,9 @@ def build_user(row, role):
     return User(username=row["username"], role=role, first_name=row.get("first_name", ""),
                 last_name=row.get("last_name", ""), email=row.get("email", ""),
                 student_id=row.get("student_id", ""), section=row.get("section", ""),
-                must_change_password=True)
+                must_change_password=True,
+                # a student added during the semester is not blamed for deadlines that passed before
+                tracked_from=timezone.localdate() if role == User.Role.STUDENT else None)
 
 
 def check_rows(rows):

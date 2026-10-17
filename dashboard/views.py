@@ -61,6 +61,8 @@ def timeline_for(student, now=None):
         if sub:
             late = sub.days_late()
             status, label = ("late", f"Submitted {days_text(late)} late") if late else ("done", "Submitted")
+        elif d.due_at < now and not student.counts(d):
+            status, label = "before", "Before your account"
         elif d.due_at < now:
             status, label = "missing", "Missing"
         else:
@@ -72,9 +74,11 @@ def timeline_for(student, now=None):
 
 def progress_for(rows):
     """How far through the deliverables a student is: how many are handed in, out of how many, as a percent."""
-    total = len(rows)
+    # deadlines from before a late added student's account are left out of the count
+    total = sum(1 for r in rows if r["status"] != "before")
     done = sum(1 for r in rows if r["status"] in ("done", "late"))
-    return {"done": done, "total": total, "percent": round(100 * done / total) if total else 0}
+    return {"done": done, "total": total, "percent": round(100 * done / total) if total else 0,
+            "before": len(rows) - total}
 
 
 @role_required("student")
@@ -110,7 +114,7 @@ def summary_for(student, now, due_count):
         "submitted": sum(1 for r in rows if r["status"] in ("done", "late") and r["deliverable"].due_at < now),
         "early": sum(1 for r in rows if r["status"] in ("done", "late") and r["deliverable"].due_at >= now),
         "missing": sum(1 for r in rows if r["status"] == "missing"),
-        "due_count": due_count,
+        "due_count": sum(1 for r in rows if r["deliverable"].due_at < now and r["status"] != "before"),
         "last_meeting": Meeting.counted().filter(student=student).order_by("-held_on").first(),
     }
 
@@ -205,12 +209,13 @@ def main_reason(risk):
 
 def deliverable_stats(students, now):
     """For every deliverable: how many students handed it in, how many were late, how many are missing."""
-    total = len(students)
     rows = []
     for d in Deliverable.objects.all():
+        expected = [s for s in students if s.counts(d)]   # a late added student is not expected to have older work
+        total = len(expected)
         # one student counts once, even if an old record holds two files for the same deliverable
         first = {}
-        for sub in Submission.objects.filter(deliverable=d, student__in=students).defer("data").order_by("submitted_at"):
+        for sub in Submission.objects.filter(deliverable=d, student__in=expected).defer("data").order_by("submitted_at"):
             first.setdefault(sub.student_id, sub)
         submitted = len(first)
         due = d.due_at < now

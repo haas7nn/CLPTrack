@@ -186,3 +186,50 @@ class ProximityAndLabelTests(TestCase):
         with override_settings(DAILY_TASK_TOKEN="right-token"):
             response = self.client.post(reverse("run_daily"), headers={"X-Task-Token": "s\u00e9cret"})
         self.assertEqual(response.status_code, 403)
+
+
+class LateAddedStudentTests(TestCase):
+    """A student added in the middle of the semester is not blamed for deadlines that passed before."""
+
+    def setUp(self):
+        from datetime import timedelta
+        from django.utils import timezone
+        from progress.models import Deliverable
+        self.now = timezone.now()
+        self.today = timezone.localdate(self.now)
+        Deliverable.objects.create(title="Reflection 1", order=1, due_at=self.now - timedelta(days=20))
+        Deliverable.objects.create(title="Proposal", order=2, due_at=self.now - timedelta(days=2))
+        Deliverable.objects.create(title="Thesis", order=3, due_at=self.now + timedelta(days=30))
+        self.sup = User.objects.create_user("sup", role="supervisor", password="x")
+        self.added = User.objects.create_user("added", role="student", password="x", supervisor=self.sup,
+                                              tracked_from=self.today - timedelta(days=5))
+        self.original = User.objects.create_user("orig", role="student", password="x", supervisor=self.sup)
+
+    def test_only_deadlines_after_the_account_count_as_overdue(self):
+        from risk.scoring import overdue_indicator
+        self.assertEqual(overdue_indicator(self.added, self.now), 1.0)       # only the proposal counts, and it is missing
+        self.assertEqual(overdue_indicator(self.original, self.now), 1.0)    # both count, both missing
+        self.added.tracked_from = self.today
+        self.assertEqual(overdue_indicator(self.added, self.now), 0.0)       # added today: nothing overdue yet
+
+    def test_meeting_gap_counts_from_the_day_they_were_added(self):
+        from risk.scoring import supervision_indicator
+        self.added.tracked_from = self.today
+        self.assertEqual(supervision_indicator(self.added, self.today), 0.0)
+
+    def test_new_student_added_today_is_green(self):
+        from risk.scoring import compute
+        self.added.tracked_from = self.today
+        self.assertEqual(compute(self.added, self.now)["status"], "green")
+
+    def test_timeline_and_bar_show_older_work_as_before_the_account(self):
+        from dashboard.views import progress_for, timeline_for
+        rows = timeline_for(self.added, self.now)
+        self.assertEqual([r["status"] for r in rows], ["before", "missing", "upcoming"])
+        self.assertEqual(progress_for(rows), {"done": 0, "total": 2, "percent": 0, "before": 1})
+
+    def test_cohort_counts_do_not_list_them_as_missing_older_work(self):
+        from dashboard.views import deliverable_stats
+        stats = {r["deliverable"].title: r for r in deliverable_stats([self.added, self.original], self.now)}
+        self.assertEqual(stats["Reflection 1"]["missing"], 1)   # only the original student
+        self.assertEqual(stats["Proposal"]["missing"], 2)

@@ -5,6 +5,7 @@ or a coordinator, and a student also points at their supervisor.
 """
 from django.contrib.auth.models import AbstractUser, UserManager as DjangoUserManager
 from django.db import models
+from django.utils import timezone
 
 
 class UserManager(DjangoUserManager):
@@ -36,9 +37,18 @@ class User(AbstractUser):
     # set when the coordinator gives someone a first password, cleared when they choose their own
     must_change_password = models.BooleanField(default=False)
 
+    # a student added after the semester started: deadlines before this date were handled on Moodle,
+    # so they are not counted as missing. Empty means every deadline counts.
+    tracked_from = models.DateField(null=True, blank=True,
+                                    help_text="Students only. Deadlines before this date are not counted as missing.")
+
     def __str__(self):
         name = self.get_full_name() or self.username
         return f"{name} ({self.get_role_display()})"
+
+    def counts(self, deliverable):
+        """Is this deliverable one the student is expected to hand in through CLPTrack?"""
+        return not self.tracked_from or timezone.localdate(deliverable.due_at) >= self.tracked_from
 
     @property
     def is_student(self):

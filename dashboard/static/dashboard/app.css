@@ -172,6 +172,7 @@ pre.example { background: #f5f7fb; border: 1px solid #e6eaf0; border-radius: 8px
 .ms-late { background: #f0b429; } .milestones .ms-late i { color: #3a2a00; }
 .ms-missing { background: #c0352d; }
 .ms-soon { background: #f69240; } .milestones .ms-soon i { color: #3a2a00; }
+.ms-before { background: repeating-linear-gradient(45deg, #eef1f5 0 4px, #d5dae2 4px 8px); } .milestones .ms-before i { color: #5a6475; }
 .ms-upcoming { background: #d5dae2; } .milestones .ms-upcoming i { color: #2f3847; }
 .milestone-key { display: flex; flex-wrap: wrap; gap: 0.4rem 1.1rem; }
 .milestone-key b.ms { display: inline-block; width: 12px; height: 12px; border-radius: 3px; vertical-align: -1px; margin-right: 0.3rem; }

@@ -10,7 +10,7 @@ class UserAdmin(BaseUserAdmin):
     list_display = ("username", "first_name", "last_name", "role", "student_id", "section", "supervisor")
     list_filter = ("role", "section", "supervisor")
     fieldsets = BaseUserAdmin.fieldsets + (
-        ("CLP", {"fields": ("role", "student_id", "section", "supervisor", "must_change_password")}),
+        ("CLP", {"fields": ("role", "student_id", "section", "supervisor", "tracked_from", "must_change_password")}),
     )
     add_fieldsets = BaseUserAdmin.add_fieldsets + (
         ("CLP", {"fields": ("role", "student_id", "section", "supervisor", "email", "first_name", "last_name")}),

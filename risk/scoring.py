@@ -62,8 +62,8 @@ def clamp(value):
 
 def overdue_indicator(student, now):
     """Of the things already due, what share has nothing handed in."""
-    due = Deliverable.objects.filter(due_at__lt=now)
-    total = due.count()
+    due = [d for d in Deliverable.objects.filter(due_at__lt=now) if student.counts(d)]
+    total = len(due)
     if total == 0:
         return 0.0
     submitted = Submission.objects.filter(student=student, deliverable__in=due).values("deliverable").distinct().count()
@@ -83,7 +83,9 @@ def supervision_indicator(student, today):
     """How long since the last meeting, beyond the one week that is allowed."""
     # a meeting the supervisor marked as not held does not count
     last = Meeting.counted().filter(student=student).order_by("-held_on").first()
-    since = last.held_on if last else semester_start()
+    # with no meeting, count from the semester start, or from the day a late added student was added
+    start = max(semester_start(), student.tracked_from) if student.tracked_from else semester_start()
+    since = last.held_on if last else start
     gap = (today - since).days
     return clamp((gap - MEETING_RULE_DAYS) / SUPERVISION_CAP_DAYS)
 

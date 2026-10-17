@@ -202,7 +202,7 @@ class ProgressBarTests(TestCase):
         Deliverable.objects.create(title="Reflection 2", order=3, due_at=now + timedelta(days=3))
         Deliverable.objects.create(title="Thesis", order=4, due_at=now + timedelta(days=60))
         Submission.objects.create(student=student, deliverable=first, filename="r1.pdf", submitted_at=now - timedelta(days=7))
-        self.assertEqual(progress_for(timeline_for(student, now)), {"done": 1, "total": 4, "percent": 25})
+        self.assertEqual(progress_for(timeline_for(student, now)), {"done": 1, "total": 4, "percent": 25, "before": 0})
         self.client.login(username="stu", password="x")
         page = self.client.get(reverse("student_home"))
         self.assertContains(page, "1 of 4 handed in, 25%")

@@ -202,3 +202,16 @@ class SuperuserRoleTests(TestCase):
     def test_a_superuser_made_on_the_command_line_is_a_coordinator(self):
         admin = User.objects.create_superuser("root", "root@example.com", "a-long-password-1")
         self.assertEqual(admin.role, "coordinator")
+
+
+class ImportStartDateTests(TestCase):
+    def test_imported_students_are_tracked_from_today(self):
+        from django.utils import timezone
+        from django.core.files.uploadedfile import SimpleUploadedFile
+        from accounts import importer
+        rows, _ = importer.read_rows(SimpleUploadedFile("p.csv", importer.EXAMPLE.encode()))
+        new, _, problems = importer.check_rows(rows)
+        self.assertEqual(problems, [])
+        importer.create_accounts(new)
+        self.assertEqual(User.objects.get(username="202300101").tracked_from, timezone.localdate())
+        self.assertIsNone(User.objects.get(username="dr.salem").tracked_from)
