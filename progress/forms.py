@@ -48,4 +48,4 @@ class FeedbackForm(forms.ModelForm):
     class Meta:
         model = Feedback
         fields = ["text"]
-        widgets = {"text": forms.Textarea(attrs={"rows": 3})}
+        widgets = {"text": forms.Textarea(attrs={"rows": 3, "aria-label": "Feedback for the student"})}

@@ -26,7 +26,7 @@
         <a class="nav-link {% if path == '/coordinator/' %}active{% endif %}" href="{% url 'coordinator_home' %}">Cohort</a>
         <a class="nav-link {% if path == '/people/add/' %}active{% endif %}" href="{% url 'import_people' %}">Add people</a>
         <a class="nav-link {% if path == '/score-settings/' %}active{% endif %}" href="{% url 'score_settings' %}">Score settings</a>
-        <a class="nav-link" href="{% url 'admin:index' %}">Admin</a>
+        {% if user.is_staff %}<a class="nav-link" href="{% url 'admin:index' %}">Admin</a>{% endif %}
         {% endif %}
       </div>
       {% endwith %}

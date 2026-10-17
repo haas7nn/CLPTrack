@@ -101,6 +101,7 @@ footer.site { color: var(--muted); font-size: 0.8rem; }
   .stat .num { font-size: 1.6rem; }
 }
 .tl-action a.small { word-break: break-all; }
+.tl-action a.small + a.small { word-break: normal; white-space: nowrap; }   /* the replace link stays one word */
 @media (max-width: 575px) {
   .tl-row { flex-wrap: wrap; gap: 0.6rem 0.9rem; padding: 0.9rem 1rem; }
   .tl-row .flex-grow-1 { flex-basis: calc(100% - 44px - 0.9rem); }
@@ -176,3 +177,12 @@ pre.example { background: #f5f7fb; border: 1px solid #e6eaf0; border-radius: 8px
 .ms-upcoming { background: #d5dae2; } .milestones .ms-upcoming i { color: #2f3847; }
 .milestone-key { display: flex; flex-wrap: wrap; gap: 0.4rem 1.1rem; }
 .milestone-key b.ms { display: inline-block; width: 12px; height: 12px; border-radius: 3px; vertical-align: -1px; margin-right: 0.3rem; }
+
+/* on a phone the links move to their own row under the name and sign out, and scroll sideways if they
+   still do not fit, so the page itself never gets wider than the screen */
+@media (max-width: 767px) {
+  .topbar .navbar > .container { flex-wrap: wrap; }
+  .topbar .navbar-nav { order: 3; width: 100%; margin-left: 0 !important; overflow-x: auto; scrollbar-width: none; }
+  .topbar .navbar-nav .nav-link:first-child { padding-left: 0; }
+  .topbar .navbar > .container > .d-flex { margin-left: auto; }
+}

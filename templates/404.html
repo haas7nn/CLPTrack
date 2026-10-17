@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block title %}Page not found, CLPTrack{% endblock %}
+{% block content %}
+<div class="card mx-auto" style="max-width: 520px"><div class="card-body p-4">
+  <h1 class="page-title mb-2">Page not found</h1>
+  <p class="muted">The address may be wrong, or the record may have been removed.</p>
+  <a class="btn btn-navy btn-sm" href="{% url 'home' %}">Back to my page</a>
+</div></div>
+{% endblock %}

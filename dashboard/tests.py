@@ -246,3 +246,12 @@ class StuckInRedTests(TestCase):
         self.assertEqual(self.response.context["totals"]["stuck"], 1)
         self.assertContains(self.response, "Red for 15 days, follow up with the supervisor")
         self.assertContains(self.response, "1 red for two weeks or more")
+
+
+class ErrorPageTests(TestCase):
+    def test_a_blocked_page_explains_itself(self):
+        User.objects.create_user("stu", role="student", password="x")
+        self.client.login(username="stu", password="x")
+        response = self.client.get(reverse("coordinator_home"))
+        self.assertEqual(response.status_code, 403)
+        self.assertContains(response, "You cannot open this page", status_code=403)
