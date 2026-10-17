@@ -37,20 +37,20 @@
 
 <div class="card table-card mb-4">
   <table class="table table-hover wide">
-    <thead><tr><th class="ps-4">Student</th><th>ID</th><th>Submitted</th><th>Missing</th><th>Last meeting</th><th class="pe-4">Status</th></tr></thead>
+    <thead><tr><th class="ps-4">Student</th><th>Status</th><th>Submitted</th><th>Missing</th><th>Last meeting</th><th class="pe-4 col-id">ID</th></tr></thead>
     <tbody>
     {% for s in students %}
       <tr>
         <td class="ps-4"><a class="name" href="{% url 'student_detail' s.user.id %}">{{ s.user.get_full_name|default:s.user.username }}</a></td>
-        <td class="muted">{{ s.user.student_id }}</td>
-        <td>{{ s.submitted }} of {{ s.due_count }} due{% if s.early %} <span class="tag ms-1">+{{ s.early }} early</span>{% endif %}</td>
-        <td>{% if s.missing %}<span class="text-danger fw-semibold">{{ s.missing }}</span>{% else %}0{% endif %}</td>
-        <td>{% if s.last_meeting %}{{ s.last_meeting.held_on|date:"j M" }}{% else %}<span class="muted">none</span>{% endif %}</td>
-        <td class="pe-4">
+        <td class="text-nowrap">
           {% if s.risk %}<span class="status status-{{ s.risk.status }}">{{ s.risk.get_status_display }} {{ s.risk.score }}</span>
           {% if s.trend is not None %}<span class="trend {% if s.trend > 0 %}up{% elif s.trend < 0 %}down{% endif %}" title="change over the last 7 days">{% if s.trend > 0 %}&#9650; {{ s.trend }}{% elif s.trend < 0 %}&#9660; {{ s.trend|cut:"-" }}{% else %}0{% endif %}</span>{% endif %}
           {% else %}<span class="status status-none">Not scored</span>{% endif %}
         </td>
+        <td>{{ s.submitted }} of {{ s.due_count }} due{% if s.early %} <span class="tag ms-1">+{{ s.early }} early</span>{% endif %}</td>
+        <td>{% if s.missing %}<span class="text-danger fw-semibold">{{ s.missing }}</span>{% else %}0{% endif %}</td>
+        <td>{% if s.last_meeting %}{{ s.last_meeting.held_on|date:"j M" }}{% else %}<span class="muted">none</span>{% endif %}</td>
+        <td class="muted pe-4 col-id">{{ s.user.student_id }}</td>
       </tr>
     {% empty %}
       <tr><td colspan="6" class="muted ps-4">No students are assigned to you yet.</td></tr>
@@ -84,16 +84,20 @@
   </div>
 </div>
 {% if students %}
-<div class="card"><div class="card-body p-4"><h2 class="section-title">Submitted so far, by student</h2><canvas id="progress" height="80"></canvas></div></div>
+<div class="card"><div class="card-body p-4"><h2 class="section-title">Submitted so far, by student</h2><div style="position: relative; height: {% widthratio students|length 1 40 %}px; min-height: 160px"><canvas id="progress"></canvas></div></div></div>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
 <script>
   // one bar per student: how many of the due deliverables they have handed in
   const labels = [{% for s in students %}"{{ s.user.get_full_name|default:s.user.username|escapejs }}",{% endfor %}];
   const submitted = [{% for s in students %}{{ s.submitted }},{% endfor %}];
-  const due = {{ students.0.due_count|default:0 }};
+  // the most any student has due, students added late have fewer
+  const due = Math.max(1, {% for s in students %}{{ s.due_count }},{% endfor %});
   new Chart(document.getElementById("progress"), {type: "bar",
     data: {labels: labels, datasets: [{label: "Submitted", data: submitted, backgroundColor: "#0f2a5c", borderRadius: 6}]},
-    options: {indexAxis: "y", scales: {x: {min: 0, max: Math.max(due, 1), ticks: {stepSize: 1}, grid: {color: "#eef1f6"}}, y: {grid: {display: false}}}, plugins: {legend: {display: false}}}});
+    options: {indexAxis: "y", maintainAspectRatio: false,
+      scales: {x: {min: 0, max: due, ticks: {stepSize: 1}, grid: {color: "#eef1f6"}},
+               y: {grid: {display: false}, ticks: {autoSkip: false}}},   // every name shown, never skipped
+      plugins: {legend: {display: false}}}});
 </script>
 {% endif %}
 {% endblock %}

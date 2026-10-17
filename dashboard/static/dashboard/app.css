@@ -186,3 +186,6 @@ pre.example { background: #f5f7fb; border: 1px solid #e6eaf0; border-radius: 8px
   .topbar .navbar-nav .nav-link:first-child { padding-left: 0; }
   .topbar .navbar > .container > .d-flex { margin-left: auto; }
 }
+
+/* the student ID is the least needed column, so phones drop it and the colour stays in view */
+@media (max-width: 767px) { .col-id { display: none; } }
