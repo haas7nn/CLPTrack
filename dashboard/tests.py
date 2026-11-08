@@ -255,3 +255,61 @@ class ErrorPageTests(TestCase):
         response = self.client.get(reverse("coordinator_home"))
         self.assertEqual(response.status_code, 403)
         self.assertContains(response, "You cannot open this page", status_code=403)
+
+
+class CohortPageQueryTests(TestCase):
+    """The coordinator page asks the database the same number of questions however many students there are."""
+
+    def make_cohort(self, start, size):
+        from datetime import timedelta
+        from django.utils import timezone
+        from progress.models import Action, Deliverable, Meeting, Submission
+        from risk.models import RiskScore
+        now, today = timezone.now(), timezone.localdate()
+        sups = list(User.objects.filter(role="supervisor"))
+        deliverables = list(Deliverable.objects.order_by("order"))
+        for n in range(start, start + size):
+            student = User.objects.create_user(f"s{n}", role="student", password="x", supervisor=sups[n % len(sups)],
+                                               first_name="Student", last_name=str(n))
+            Submission.objects.create(student=student, deliverable=deliverables[0], filename="a.pdf",
+                                      submitted_at=now - timedelta(days=9))
+            meeting = Meeting.objects.create(student=student, held_on=today - timedelta(days=n % 20), discussed="x")
+            Action.objects.create(meeting=meeting, description="do it")
+            for day in range(3):
+                status = ("green", "amber", "red")[n % 3]
+                RiskScore.objects.create(student=student, scored_on=today - timedelta(days=day * 7), score=20 + 20 * (n % 3),
+                                         status=status, breakdown={"overdue": {"value": 1, "weight": 35, "points": 35.0}})
+
+    def count_queries(self, url):
+        from django.db import connection
+        from django.test.utils import CaptureQueriesContext
+        with CaptureQueriesContext(connection) as queries:
+            self.assertEqual(self.client.get(url).status_code, 200)
+        return len(queries)
+
+    def counts(self):
+        """Queries for the cohort page, the export and one supervisor's page."""
+        result = [self.count_queries(reverse("coordinator_home")), self.count_queries(reverse("export_csv"))]
+        self.client.login(username="supa", password="x")
+        result.append(self.count_queries(reverse("supervisor_home")))
+        self.client.login(username="coord", password="x")
+        return result
+
+    def setUp(self):
+        from datetime import timedelta
+        from django.utils import timezone
+        from progress.models import Deliverable
+        now = timezone.now()
+        User.objects.create_user("coord", role="coordinator", password="x")
+        for name in ("supa", "supb"):
+            User.objects.create_user(name, role="supervisor", password="x")
+        for order, days in enumerate((-20, -10, -2, 5, 15, 30), start=1):
+            Deliverable.objects.create(title=f"Item {order}", order=order, due_at=now + timedelta(days=days))
+        self.client.login(username="coord", password="x")
+
+    def test_query_count_does_not_grow_with_the_cohort(self):
+        self.make_cohort(0, 10)
+        ten = self.counts()
+        self.make_cohort(10, 10)
+        self.assertEqual(self.counts(), ten)
+        self.assertLess(ten[0], 20)   # it was 91 for ten students before the records were loaded together

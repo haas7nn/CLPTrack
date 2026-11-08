@@ -50,12 +50,50 @@ def days_text(n):
     return f"{n} day{'' if n == 1 else 's'}"
 
 
-def timeline_for(student, now=None):
+class CohortRecords:
+    """Everything the summaries need about a group of students, loaded in a fixed number of queries.
+
+    Without it every student costs about seven queries (submissions, deliverables, two scores, the last
+    meeting, and one more per upload to find its deadline), so a class of 40 meant about 300 queries for
+    one page. Here each kind of record is fetched once for the whole group and sorted out in memory.
+    """
+
+    def __init__(self, students):
+        from collections import defaultdict
+        ids = [s.id for s in students]
+        self.deliverables = list(Deliverable.objects.all())
+        by_id = {d.id: d for d in self.deliverables}
+        self.submissions = defaultdict(list)
+        for sub in Submission.objects.filter(student_id__in=ids).defer("data").order_by("submitted_at"):
+            sub.deliverable = by_id[sub.deliverable_id]   # its deadline is already here, no extra query for days_late
+            self.submissions[sub.student_id].append(sub)
+        # the score history is only dates and colours, the full row with its breakdown is fetched for the latest day only
+        self.history = defaultdict(list)
+        for student_id, scored_on, status, score in (RiskScore.objects.filter(student_id__in=ids)
+                                                      .order_by("-scored_on").values_list("student_id", "scored_on", "status", "score")):
+            self.history[student_id].append((scored_on, status, score))
+        self.latest = {}
+        for risk in RiskScore.objects.filter(student_id__in=ids).order_by("student_id", "-scored_on"):
+            self.latest.setdefault(risk.student_id, risk)
+        self.last_meeting = {}
+        for meeting in Meeting.counted().filter(student_id__in=ids).order_by("-held_on"):
+            self.last_meeting.setdefault(meeting.student_id, meeting)
+        self.waiting = defaultdict(int)
+        for meeting in Meeting.objects.filter(student_id__in=ids, status=Meeting.Status.WAITING).only("student_id"):
+            self.waiting[meeting.student_id] += 1
+
+
+def timeline_for(student, now=None, records=None):
     """Goes through every deliverable and works out where this student stands on each one."""
     now = now or timezone.now()
-    submissions = {s.deliverable_id: s for s in Submission.objects.filter(student=student).defer("data").order_by("submitted_at")}
+    if records:
+        found, deliverables = records.submissions[student.id], records.deliverables
+    else:
+        found = Submission.objects.filter(student=student).defer("data").select_related("deliverable").order_by("submitted_at")
+        deliverables = Deliverable.objects.all()
+    submissions = {s.deliverable_id: s for s in found}
     rows = []
-    for d in Deliverable.objects.all():
+    for d in deliverables:
         sub = submissions.get(d.id)
         days_left = (d.due_at - now).days
         if sub:
@@ -100,12 +138,23 @@ def student_home(request):
     })
 
 
-def summary_for(student, now, due_count):
-    """One line about a student: their score, how much is in, how much is missing, last meeting."""
-    rows = timeline_for(student, now)
-    latest = RiskScore.objects.filter(student=student).first()
-    week_ago = RiskScore.objects.filter(student=student, scored_on__lte=timezone.localdate(now) - timedelta(days=7)).first()
-    trend = (latest.score - week_ago.score) if latest and week_ago else None
+def summary_for(student, now, due_count=None, records=None):
+    """One line about a student: their score, how much is in, how much is missing, last meeting.
+
+    Pages that list many students pass records (a CohortRecords), so nothing here asks the database.
+    """
+    rows = timeline_for(student, now, records)
+    week_cutoff = timezone.localdate(now) - timedelta(days=7)
+    if records:
+        latest = records.latest.get(student.id)
+        week_ago = next((score for scored_on, _, score in records.history[student.id] if scored_on <= week_cutoff), None)
+        last_meeting = records.last_meeting.get(student.id)
+    else:
+        latest = RiskScore.objects.filter(student=student).first()
+        old = RiskScore.objects.filter(student=student, scored_on__lte=week_cutoff).first()
+        week_ago = old.score if old else None
+        last_meeting = Meeting.counted().filter(student=student).order_by("-held_on").first()
+    trend = (latest.score - week_ago) if latest and week_ago is not None else None
     return {
         "user": student,
         "risk": latest,
@@ -115,15 +164,16 @@ def summary_for(student, now, due_count):
         "early": sum(1 for r in rows if r["status"] in ("done", "late") and r["deliverable"].due_at >= now),
         "missing": sum(1 for r in rows if r["status"] == "missing"),
         "due_count": sum(1 for r in rows if r["deliverable"].due_at < now and r["status"] != "before"),
-        "last_meeting": Meeting.counted().filter(student=student).order_by("-held_on").first(),
+        "last_meeting": last_meeting,
     }
 
 
 @role_required("supervisor")
 def supervisor_home(request):
     now = timezone.now()
-    due_count = Deliverable.objects.filter(due_at__lt=now).count()
-    students = [summary_for(s, now, due_count) for s in request.user.students.order_by("last_name", "first_name")]
+    mine = list(request.user.students.order_by("last_name", "first_name"))
+    records = CohortRecords(mine)
+    students = [summary_for(s, now, records=records) for s in mine]
     # how many students are green, amber and red right now, for the summary and the chart
     counts = {"green": 0, "amber": 0, "red": 0, "none": 0}
     for s in students:
@@ -189,10 +239,15 @@ INDICATOR_WORDS = {
 STUCK_DAYS = 14
 
 
-def red_days(student, today):
-    """How many days the student has been red without a break, counted back from their latest score."""
+def red_days(student, today, history=None):
+    """How many days the student has been red without a break, counted back from their latest score.
+
+    history is the student's (date, colour, score) list newest first, when the page already loaded it.
+    """
+    if history is None:
+        history = student.risk_scores.order_by("-scored_on").values_list("scored_on", "status", "score")
     start = None
-    for scored_on, status in student.risk_scores.order_by("-scored_on").values_list("scored_on", "status"):
+    for scored_on, status, _ in history:
         if status != "red":
             break
         start = scored_on
@@ -207,16 +262,19 @@ def main_reason(risk):
     return INDICATOR_WORDS.get(name, name) if part["points"] > 0 else ""
 
 
-def deliverable_stats(students, now):
+def deliverable_stats(students, now, records=None):
     """For every deliverable: how many students handed it in, how many were late, how many are missing."""
+    records = records or CohortRecords(students)
     rows = []
-    for d in Deliverable.objects.all():
+    for d in records.deliverables:
         expected = [s for s in students if s.counts(d)]   # a late added student is not expected to have older work
         total = len(expected)
         # one student counts once, even if an old record holds two files for the same deliverable
         first = {}
-        for sub in Submission.objects.filter(deliverable=d, student__in=expected).defer("data").order_by("submitted_at"):
-            first.setdefault(sub.student_id, sub)
+        for student in expected:
+            for sub in records.submissions[student.id]:   # already oldest first
+                if sub.deliverable_id == d.id:
+                    first.setdefault(student.id, sub)
         submitted = len(first)
         due = d.due_at < now
         rows.append({
@@ -267,13 +325,15 @@ def coordinator_home(request):
     """
     from accounts.models import User
     now = timezone.now()
-    due_count = Deliverable.objects.filter(due_at__lt=now).count()
     totals = {"green": 0, "amber": 0, "red": 0, "none": 0, "students": 0, "missing": 0, "waiting": 0}
     groups, everyone = [], []
+    # every student and their records in one go, then shared out to their supervisor's group
+    all_students = list(User.objects.filter(role="student").order_by("last_name", "first_name"))
+    records = CohortRecords(all_students)
 
     def group_for(name, students):
         counts = {"green": 0, "amber": 0, "red": 0, "none": 0}
-        rows = [summary_for(student, now, due_count) for student in students]
+        rows = [summary_for(student, now, records=records) for student in students]
         for row in rows:
             row["supervisor_name"] = name
             status = row["risk"].status if row["risk"] else "none"
@@ -284,7 +344,7 @@ def coordinator_home(request):
         totals["students"] += len(rows)
         totals["missing"] += missing
         everyone.extend(rows)
-        waiting = Meeting.objects.filter(student__in=[row["user"] for row in rows], status=Meeting.Status.WAITING).count()
+        waiting = sum(records.waiting[row["user"].id] for row in rows)
         totals["waiting"] += waiting
         return {
             "name": name, "rows": rows, "counts": counts, "total": len(rows), "missing": missing, "waiting": waiting,
@@ -296,9 +356,9 @@ def coordinator_home(request):
     supervisors = list(User.objects.filter(role="supervisor").order_by("last_name", "first_name"))
     for supervisor in supervisors:
         groups.append(group_for(supervisor.get_full_name() or supervisor.username,
-                                supervisor.students.order_by("last_name", "first_name")))
-    unassigned = User.objects.filter(role="student", supervisor__isnull=True).order_by("last_name", "first_name")
-    if unassigned.exists():
+                                [s for s in all_students if s.supervisor_id == supervisor.id]))
+    unassigned = [s for s in all_students if s.supervisor_id is None]
+    if unassigned:
         groups.append(group_for("No supervisor yet", unassigned))
     totals["supervisors"] = len(supervisors)
 
@@ -307,7 +367,7 @@ def coordinator_home(request):
     attention = [row for row in everyone if row["risk"] and row["risk"].status != "green"]
     for row in attention:
         row["reason"] = main_reason(row["risk"])
-        row["red_days"] = red_days(row["user"], today) if row["risk"].status == "red" else 0
+        row["red_days"] = red_days(row["user"], today, records.history[row["user"].id]) if row["risk"].status == "red" else 0
         row["stuck"] = row["red_days"] >= STUCK_DAYS
     # the students stuck in red come first, then the rest worst score first
     attention.sort(key=lambda row: (not row["stuck"], -row["risk"].score))
@@ -315,7 +375,7 @@ def coordinator_home(request):
 
     return render(request, "dashboard/coordinator_home.html", {
         "groups": groups, "totals": totals, "attention": attention,
-        "deliverables": deliverable_stats([row["user"] for row in everyone], now),
+        "deliverables": deliverable_stats([row["user"] for row in everyone], now, records),
         "meetings": meeting_stats(everyone, timezone.localdate(now)),
         "history": colour_history(),
     })
@@ -336,14 +396,16 @@ def export_csv(request):
         raise PermissionDenied
     now = timezone.now()
     due_count = Deliverable.objects.filter(due_at__lt=now).count()
+    students = list(students.select_related("supervisor").order_by("last_name", "first_name"))
+    records = CohortRecords(students)
 
     response = HttpResponse(content_type="text/csv")
     response["Content-Disposition"] = f'attachment; filename="clptrack_{now:%Y-%m-%d}.csv"'
     writer = csv.writer(response)
     writer.writerow(["Student ID", "Name", "Section", "Supervisor", "Score", "Status",
                      "Submitted", "Early", "Missing", "Due so far", "Last meeting"])
-    for student in students.order_by("last_name", "first_name"):
-        row = summary_for(student, now, due_count)
+    for student in students:
+        row = summary_for(student, now, records=records)
         writer.writerow([
             student.student_id,
             student.get_full_name() or student.username,
