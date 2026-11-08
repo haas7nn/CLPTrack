@@ -40,7 +40,8 @@ Then open http://127.0.0.1:8000
 
 Development accounts, development only: coordinator (also the admin), supervisor1, student1 to student6.
 `seed_demo` gives the first five a starting password written in that command. Run `shared_password` to
-replace it with your own. On the host the same command reads `ACCOUNTS_PASSWORD`.
+replace it with your own. The host no longer sets a shared password: before testing with real people
+it was removed, and each tester gets their own first password when they are loaded from a file.
 The admin site is at http://127.0.0.1:8000/admin
 
 ## Tests
